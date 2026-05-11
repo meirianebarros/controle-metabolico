@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Controle Metabólico</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--t:#1D9E75;--t50:#E1F5EE;--t100:#9FE1CB;--t800:#085041;--a50:#FAEEDA;--a100:#FAC775;--a800:#633806;--a4:#BA7517;--g50:#EAF3DE;--g100:#C0DD97;--g800:#27500A;--r50:#FCEBEB;--r100:#F7C1C1;--r800:#791F1F;--b50:#E6F1FB;--b100:#B5D4F4;--b800:#0C447C;--p50:#EEEDFE;--p800:#3C3489;--co50:#FAECE7;--co800:#712B13;--bg:#FAFAF8;--bg2:#F2F2EE;--tx:#1A1A18;--m:#6B6B65;--bd:#E4E4DF;--bd2:#CCCCC5;--r:12px;--rm:8px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);height:100%}
+input,select,textarea{font-family:inherit;background:var(--bg);border:.5px solid var(--bd);border-radius:var(--rm);padding:10px 12px;font-size:14px;width:100%;outline:none;color:var(--tx);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--t)}
+textarea{resize:vertical;min-height:80px}
+button{font-family:inherit}
+
+/* === AUTH === */
+#auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem 1.5rem;background:linear-gradient(155deg,#edf9f5 0%,#fafaf8 55%)}
+.a-logo{font-family:'DM Serif Display',serif;font-size:28px;color:var(--t800);text-align:center;margin-bottom:5px}
+.a-logo span{color:var(--t);font-style:italic}
+.a-sub{font-size:13px;color:var(--m);text-align:center;margin-bottom:2.5rem}
+.a-card{background:#fff;border:.5px solid var(--bd);border-radius:16px;padding:1.75rem 1.5rem;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+.a-title{font-size:18px;font-weight:500;margin-bottom:1.25rem}
+.a-field{margin-bottom:1rem}
+.a-field label{display:block;font-size:11px;color:var(--m);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.btn-a{width:100%;padding:13px;background:var(--t);border:none;border-radius:var(--r);font-size:15px;font-weight:500;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.5rem;transition:opacity .15s}
+.btn-a:hover{opacity:.88}
+.btn-a:disabled{opacity:.4;cursor:not-allowed}
+.a-err{font-size:12px;color:var(--r800);background:var(--r50);border-radius:var(--rm);padding:.5rem .75rem;margin-top:.75rem;display:none}
+.a-info{font-size:12px;color:var(--t800);background:var(--t50);border-radius:var(--rm);padding:.5rem .75rem;margin-top:.75rem;display:none}
+.a-link{background:none;border:none;cursor:pointer;font-size:12px;color:var(--m);font-family:inherit;display:block;text-align:center;margin-top:1rem}
+
+/* === APP SHELL === */
+#app{display:none;flex-direction:column;height:100vh;max-width:480px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.875rem 1rem;border-bottom:.5px solid var(--bd);background:var(--bg);position:sticky;top:0;z-index:100}
+.t-logo{font-family:'DM Serif Display',serif;font-size:17px;color:var(--t800)}
+.t-logo span{color:var(--t);font-style:italic}
+.u-badge{font-size:12px;color:var(--m);background:var(--bg2);border-radius:99px;padding:4px 10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-out{background:none;border:none;cursor:pointer;color:var(--m);font-size:18px;padding:4px;border-radius:var(--rm);display:flex;align-items:center}
+.pc{flex:1;overflow-y:auto;padding-bottom:80px}
+.pg{display:none;padding:1rem}
+.pg.on{display:block}
+
+/* === BOTTOM NAV === */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg);border-top:.5px solid var(--bd);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px 6px;border:none;background:none;cursor:pointer;color:var(--m);font-size:10px;gap:3px;transition:color .15s;font-family:inherit}
+.nb i{font-size:20px;line-height:1}
+.nb.on{color:var(--t)}
+.nb span{font-weight:500}
+
+/* === UI COMPONENTS === */
+.card{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:.75rem}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:.875rem}
+.si{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.si i{font-size:15px}
+.si.t{background:var(--t50)} .si.t i{color:var(--t)}
+.si.a{background:var(--a50)} .si.a i{color:#854F0B}
+.si.g{background:var(--g50)} .si.g i{color:#3B6D11}
+.si.b{background:var(--b50)} .si.b i{color:var(--b800)}
+.st{font-size:14px;font-weight:500}
+.fl{margin-bottom:.75rem}
+.fl label{display:block;font-size:11px;color:var(--m);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt{padding:8px 10px;border:.5px solid var(--bd);border-radius:var(--rm);background:var(--bg2);font-size:13px;color:var(--m);cursor:pointer;text-align:left;transition:all .15s;font-family:inherit}
+.opt.on{background:var(--t50);border-color:var(--t);color:var(--t800);font-weight:500}
+.yn{display:flex;gap:6px}
+.yb{flex:1;padding:8px;border:.5px solid var(--bd);border-radius:var(--rm);background:var(--bg2);font-size:13px;color:var(--m);cursor:pointer;text-align:center;transition:all .15s;font-family:inherit}
+.yb.sy{background:var(--g50);border-color:#639922;color:var(--g800);font-weight:500}
+.yb.sn{background:var(--r50);border-color:#E24B4A;color:var(--r800);font-weight:500}
+.btn-p{width:100%;padding:12px;background:var(--t);border:none;border-radius:var(--r);font-size:14px;font-weight:500;color:#fff;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+.btn-p:hover{opacity:.88}
+.btn-p:disabled{opacity:.35;cursor:not-allowed}
+.btn-s{width:100%;padding:11px;background:none;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;color:var(--m);cursor:pointer;font-family:inherit}
+.bk{background:none;border:none;cursor:pointer;color:var(--m);font-size:18px;padding:0;display:flex;align-items:center}
+.bdg{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+.ok{background:var(--g50);color:var(--g800)}
+.at{background:var(--a50);color:var(--a800)}
+.al{background:var(--r50);color:var(--r800)}
+.cb{background:var(--bg2);border-radius:var(--rm);padding:.625rem .875rem;margin-top:.5rem;display:flex;justify-content:space-between;align-items:center}
+.pb{height:3px;background:var(--bd);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.pf{height:100%;background:var(--t);border-radius:99px;transition:width .4s}
+.schips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem}
+.sc{padding:3px 10px;border-radius:99px;font-size:11px;border:.5px solid var(--bd);color:var(--m);background:var(--bg2)}
+.sc.d{background:var(--t50);color:var(--t800);border-color:var(--t100)}
+.sc.c{background:var(--t);color:#fff;border-color:var(--t)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--m);font-size:13px;line-height:1.6}
+.empty i{font-size:32px;display:block;margin-bottom:.5rem;opacity:.35}
+.tw{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:999;width:90%;max-width:380px;pointer-events:none}
+.tst{border-radius:var(--rm);padding:.625rem 1rem;font-size:13px;display:none;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+.tab-row{display:flex;gap:4px;margin-bottom:1.25rem;background:var(--bg2);border-radius:var(--rm);padding:3px}
+.tab{flex:1;padding:7px 4px;border:none;border-radius:6px;background:transparent;font-size:12px;color:var(--m);cursor:pointer;transition:all .15s;font-family:inherit}
+.tab.on{background:#fff;color:var(--tx);font-weight:500;border:.5px solid var(--bd)}
+
+/* === HOME === */
+.hg h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:3px}
+.hg p{font-size:13px;color:var(--m)}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+.mc{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:.875rem 1rem}
+.ml{font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.mv{font-size:22px;font-weight:500;line-height:1}
+.mu{font-size:12px;color:var(--m);margin-left:2px}
+.modg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modc{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:.875rem;cursor:pointer;text-align:left;transition:border-color .15s}
+.modc:hover{border-color:var(--bd2)}
+.modi{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:.625rem}
+.modi i{font-size:18px}
+.it{background:var(--t50)} .it i{color:var(--t)}
+.ia{background:var(--a50)} .ia i{color:#854F0B}
+.ig{background:var(--g50)} .ig i{color:#3B6D11}
+.ib{background:var(--b50)} .ib i{color:var(--b800)}
+.ip{background:var(--p50)} .ip i{color:#534AB7}
+.ico{background:var(--co50)} .ico i{color:#D85A30}
+.mn{font-size:13px;font-weight:500}
+.md{font-size:11px;color:var(--m);margin-top:2px}
+
+/* === RECEITAS === */
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rc{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);cursor:pointer;overflow:hidden;transition:border-color .15s}
+.rc:hover{border-color:var(--bd2)}
+.ri{width:100%;height:100px;object-fit:cover;display:block;background:var(--bg2)}
+.rb{padding:.75rem}
+.rn{font-size:12px;font-weight:500;line-height:1.3;margin-bottom:.375rem}
+.rm{display:flex;gap:6px;font-size:11px;color:var(--m);align-items:center}
+.ig-b{padding:2px 6px;border-radius:99px;font-size:10px;font-weight:500}
+.ig-baixo{background:var(--g50);color:var(--g800)}
+.ig-medio{background:var(--a50);color:var(--a800)}
+.cc{padding:1px 6px;border-radius:99px;font-size:10px;font-weight:500}
+.cafe{background:var(--a50);color:var(--a800)}
+.almoco{background:var(--t50);color:var(--t800)}
+.lanche{background:var(--g50);color:var(--g800)}
+.jantar{background:var(--b50);color:var(--b800)}
+.sobremesa{background:var(--co50);color:var(--co800)}
+.fb{background:none;border:none;cursor:pointer;font-size:16px;color:var(--m);padding:0;margin-left:auto;line-height:1}
+.fb.on{color:#E24B4A}
+.dh{width:100%;height:190px;object-fit:cover;border-radius:var(--r);display:block;margin-bottom:1rem;background:var(--bg2)}
+.ir{display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--bg2);border-radius:var(--rm);font-size:13px;margin-bottom:5px}
+.is{font-size:11px;color:var(--t);margin-left:3px}
+.ps{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.pn{width:24px;height:24px;border-radius:50%;background:var(--t50);border:.5px solid var(--t100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--t800);flex-shrink:0}
+.drb{background:var(--t50);border:.5px solid var(--t100);border-radius:var(--rm);padding:.75rem 1rem;margin-bottom:1rem}
+
+/* === COMUNIDADE === */
+.dpc{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:.75rem}
+.dpt{display:flex;gap:10px;margin-bottom:.625rem}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.dtb{background:var(--t50);color:var(--t800);border-radius:99px;font-size:10px;font-weight:500;padding:2px 7px}
+.sr{display:flex;gap:6px;margin-bottom:.5rem}
+.str{font-size:24px;cursor:pointer;color:var(--bd2);transition:color .1s;line-height:1}
+.str.on{color:#BA7517}
+.lkb{background:none;border:.5px solid var(--bd);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--m);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:inherit}
+.lkb.on{background:var(--r50);border-color:#F09595;color:var(--r800)}
+.moa{display:flex;gap:6px;margin-top:.75rem}
+.bap{flex:1;padding:9px;background:var(--g50);border:.5px solid var(--g100);border-radius:var(--rm);font-size:13px;font-weight:500;color:var(--g800);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit}
+.brj{flex:1;padding:9px;background:var(--r50);border:.5px solid var(--r100);border-radius:var(--rm);font-size:13px;font-weight:500;color:var(--r800);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit}
+
+/* === BIBLIOTECA === */
+.ac{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:1rem 1.25rem;cursor:pointer;margin-bottom:.75rem}
+.lrw{display:none}
+.lc{font-size:15px;line-height:1.75}
+.lc h2{font-size:17px;font-weight:500;margin:1.5rem 0 .5rem}
+.lc h3{font-size:15px;font-weight:500;margin:1.25rem 0 .375rem}
+.lc p{margin-bottom:.875rem}
+.lc ul,.lc ol{padding-left:1.5rem;margin-bottom:.875rem}
+.lc li{margin-bottom:.375rem}
+.lc blockquote{border-left:3px solid var(--t);padding:.625rem 1rem;background:var(--t50);border-radius:0 var(--rm) var(--rm) 0;margin:1rem 0;font-style:italic;font-size:14px;color:var(--t800)}
+.edt{width:100%;min-height:200px;border:.5px solid var(--bd);border-radius:var(--rm);padding:.75rem;font-size:14px;line-height:1.7;outline:none;background:#fff}
+.edt:focus{border-color:var(--bd2)}
+.edt blockquote{border-left:3px solid var(--t);padding:.5rem .875rem;background:var(--t50);border-radius:0 var(--rm) var(--rm) 0;margin:.75rem 0;font-style:italic}
+.tb{padding:5px 9px;border:.5px solid var(--bd);border-radius:var(--rm);background:var(--bg2);font-size:12px;color:var(--m);cursor:pointer;font-family:inherit}
+
+/* PERFIL */
+.pav{width:64px;height:64px;border-radius:50%;background:var(--t50);border:2px solid var(--t100);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:24px;color:var(--t800);margin:0 auto 1rem}
+</style>
+</head>
+<body>
+<div class="tw"><div class="tst" id="tst"><i class="ti ti-check"></i><span id="tm">Salvo!</span></div></div>
+
+<!-- ===== AUTH ===== -->
+<div id="auth">
+<div class="a-logo">controle <span>metabólico</span></div>
+<div class="a-sub">resistência insulínica · monitoramento contínuo</div>
+
+<div class="a-card" id="lc">
+  <div class="a-title">Entrar na sua conta</div>
+  <div class="a-field"><label>E-mail</label><input type="email" id="le" placeholder="seu@email.com" autocomplete="email"></div>
+  <div class="a-field"><label>Senha</label><input type="password" id="ls" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"></div>
+  <button class="btn-a" id="blg" onclick="login()"><i class="ti ti-login"></i> Entrar</button>
+  <div class="a-err" id="le2"></div>
+  <button class="a-link" onclick="showTroca()">Primeiro acesso? Ativar conta</button>
+</div>
+
+<div class="a-card" id="tc" style="display:none">
+  <div class="a-title">Ativar minha conta</div>
+  <div style="font-size:13px;color:var(--m);margin-bottom:1rem;line-height:1.5">Use o e-mail e a senha temporária recebidos para criar sua senha pessoal.</div>
+  <div class="a-field"><label>E-mail</label><input type="email" id="te" placeholder="seu@email.com"></div>
+  <div class="a-field"><label>Senha temporária</label><input type="password" id="tt" placeholder="Senha recebida por e-mail"></div>
+  <div class="a-field"><label>Nova senha (mín. 8 caracteres)</label><input type="password" id="tn" placeholder="Crie sua senha pessoal"></div>
+  <div class="a-field"><label>Confirmar nova senha</label><input type="password" id="tc2" placeholder="Repita a senha"></div>
+  <button class="btn-a" id="btc" onclick="trocar()"><i class="ti ti-key"></i> Ativar conta</button>
+  <div class="a-err" id="te2"></div>
+  <div class="a-info" id="ti2"></div>
+  <button class="a-link" onclick="showLogin()">← Voltar para o login</button>
+</div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+<div class="topbar">
+  <div class="t-logo">controle <span>metabólico</span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="u-badge" id="ubadge"></span>
+    <button class="btn-out" onclick="logout()" title="Sair"><i class="ti ti-logout"></i></button>
+  </div>
+</div>
+
+<div class="pc">
+
+<!-- HOME -->
+<div class="pg on" id="p-home">
+  <div class="hg" style="margin-bottom:1.25rem"><h2 id="gnome">Olá!</h2><p id="gsub">Bem-vinda de volta.</p></div>
+  <div class="mg">
+    <div class="mc"><div class="ml">Último peso</div><div class="mv" id="hpeso">—<span class="mu">kg</span></div></div>
+    <div class="mc"><div class="ml">HOMA-IR</div><div class="mv" id="hhoma">—</div></div>
+    <div class="mc"><div class="ml">Energia média</div><div class="mv" id="hen">—<span class="mu">/10</span></div></div>
+    <div class="mc"><div class="ml">Registros</div><div class="mv" id="hreg">0</div></div>
+  </div>
+  <div style="font-size:12px;color:var(--m);margin-bottom:.75rem;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Módulos</div>
+  <div class="modg">
+    <button class="modc" onclick="go('p-ana')"><div class="modi it"><i class="ti ti-user-check"></i></div><div class="mn">Meu perfil</div><div class="md">Anamnese</div></button>
+    <button class="modc" onclick="go('p-reg')"><div class="modi ia"><i class="ti ti-chart-line"></i></div><div class="mn">Evolução</div><div class="md">Registro diário</div></button>
+    <button class="modc" onclick="go('p-rec')"><div class="modi ig"><i class="ti ti-salad"></i></div><div class="mn">Receitas</div><div class="md">Saudáveis para RI</div></button>
+    <button class="modc" onclick="go('p-bib')"><div class="modi ib"><i class="ti ti-book"></i></div><div class="mn">Biblioteca</div><div class="md">Textos e artigos</div></button>
+    <button class="modc" onclick="go('p-com')"><div class="modi ip"><i class="ti ti-messages"></i></div><div class="mn">Comunidade</div><div class="md">Experiências</div></button>
+    <button class="modc" onclick="go('p-ia')"><div class="modi ico"><i class="ti ti-brain"></i></div><div class="mn">IA Personalizada</div><div class="md">Recomendações</div></button>
+  </div>
+</div>
+
+<!-- PERFIL / ANAMNESE -->
+<div class="pg" id="p-ana">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem"><button class="bk" onclick="go('p-home')"><i class="ti ti-arrow-left"></i></button><span style="font-size:16px;font-weight:500">Meu perfil</span></div>
+  <div id="ana-res" style="display:none">
+    <div class="pav" id="pini"></div>
+    <div style="font-size:18px;font-weight:500;text-align:center;margin-bottom:4px" id="pnm"></div>
+    <div style="font-size:13px;color:var(--m);text-align:center;margin-bottom:1.5rem" id="peml"></div>
+    <div class="mg" id="pmet"></div>
+    <button class="btn-p" onclick="editAna()"><i class="ti ti-pencil"></i> Editar perfil</button>
+  </div>
+  <div id="ana-frm">
+    <div class="schips" id="achips"></div>
+    <div class="pb"><div class="pf" id="aprog" style="width:11%"></div></div>
+    <div style="font-size:11px;color:var(--m);margin-bottom:1rem" id="aplbl">Bloco 1 de 9</div>
+    <div id="ab1">
+      <div class="card"><div class="sh"><div class="si t"><i class="ti ti-user"></i></div><div class="st">Identificação</div></div>
+        <div class="fl"><label>Nome completo</label><input type="text" id="an" placeholder="Seu nome"></div>
+        <div class="g2"><div class="fl"><label>Data de nascimento</label><input type="date" id="anas"></div><div class="fl"><label>Altura (cm)</label><input type="number" id="aal" placeholder="165"></div></div>
+        <div class="fl"><label>Sexo</label><div class="opts" id="asx"><button class="opt" onclick="ao('asx',this,'F')">Feminino</button><button class="opt" onclick="ao('asx',this,'M')">Masculino</button></div></div>
+      </div>
+      <button class="btn-p" onclick="ag(2)">Continuar →</button>
+    </div>
+    <div id="ab2" style="display:none">
+      <div class="card"><div class="sh"><div class="si t"><i class="ti ti-ruler"></i></div><div class="st">Medidas corporais</div></div>
+        <div class="g2"><div class="fl"><label>Peso (kg)</label><input type="number" id="ape" placeholder="78" step="0.1" oninput="cimc()"></div><div class="fl"><label>Circ. abdominal (cm)</label><input type="number" id="aca" placeholder="92" oninput="crcq()"></div></div>
+        <div class="g2"><div class="fl"><label>Circ. quadril (cm)</label><input type="number" id="acq" placeholder="100" oninput="crcq()"></div><div class="fl"><label>IMC</label><input type="text" id="aimc" readonly style="background:var(--bg2)"></div></div>
+        <div class="cb" id="arcq" style="display:none"><span style="font-size:12px;color:var(--m)">Rel. cintura/quadril</span><span id="arcqv" style="font-size:15px;font-weight:500"></span></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(1)">← Voltar</button><button class="btn-p" onclick="ag(3)">Continuar →</button></div>
+    </div>
+    <div id="ab3" style="display:none">
+      <div class="card"><div class="sh"><div class="si a"><i class="ti ti-stethoscope"></i></div><div class="st">Histórico clínico</div></div>
+        <div class="fl"><label>Diabetes tipo 2?</label><div class="yn" id="adb"><button class="yb" onclick="ay('adb',this,true)">Sim</button><button class="yb" onclick="ay('adb',this,false)">Não</button></div></div>
+        <div class="fl"><label>Pré-diabetes?</label><div class="yn" id="apd"><button class="yb" onclick="ay('apd',this,true)">Sim</button><button class="yb" onclick="ay('apd',this,false)">Não</button></div></div>
+        <div class="fl"><label>Hipertensão?</label><div class="yn" id="ahp"><button class="yb" onclick="ay('ahp',this,true)">Sim</button><button class="yb" onclick="ay('ahp',this,false)">Não</button></div></div>
+        <div class="fl"><label>Síndrome metabólica?</label><div class="yn" id="asm"><button class="yb" onclick="ay('asm',this,true)">Sim</button><button class="yb" onclick="ay('asm',this,false)">Não</button></div></div>
+        <div class="fl" id="asop" style="display:none"><label>SOP?</label><div class="yn" id="asp"><button class="yb" onclick="ay('asp',this,true)">Sim</button><button class="yb" onclick="ay('asp',this,false)">Não</button></div></div>
+        <div class="fl"><label>Esteatose hepática?</label><div class="yn" id="aeh"><button class="yb" onclick="ay('aeh',this,true)">Sim</button><button class="yb" onclick="ay('aeh',this,false)">Não</button></div></div>
+        <div class="fl" style="margin-bottom:0"><label>Histórico familiar de diabetes?</label><div class="yn" id="afd"><button class="yb" onclick="ay('afd',this,true)">Sim</button><button class="yb" onclick="ay('afd',this,false)">Não</button></div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(2)">← Voltar</button><button class="btn-p" onclick="ag(4)">Continuar →</button></div>
+    </div>
+    <div id="ab4" style="display:none">
+      <div class="card"><div class="sh"><div class="si g"><i class="ti ti-test-pipe"></i></div><div class="st">Exames (opcional)</div></div>
+        <div class="g2"><div class="fl"><label>Glicemia jejum (mg/dL)</label><input type="number" id="agl" placeholder="100" oninput="choma()"></div><div class="fl"><label>Insulina jejum (µU/mL)</label><input type="number" id="ains" placeholder="10" oninput="choma()"></div></div>
+        <div class="cb" id="ahbox" style="display:none"><span style="font-size:12px;color:var(--m)">HOMA-IR</span><span id="ahval" style="font-size:15px;font-weight:500"></span></div>
+        <div class="g2" style="margin-top:.75rem"><div class="fl"><label>HbA1c (%)</label><input type="number" id="ahb" placeholder="5.5" step="0.1"></div><div class="fl"><label>Triglicerídeos (mg/dL)</label><input type="number" id="atg" placeholder="150"></div></div>
+        <div class="g2"><div class="fl"><label>HDL (mg/dL)</label><input type="number" id="ahdl" placeholder="50"></div><div class="fl"><label>TSH (mUI/L)</label><input type="number" id="atsh" placeholder="2.5" step="0.1"></div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(3)">← Voltar</button><button class="btn-p" onclick="ag(5)">Continuar →</button></div>
+    </div>
+    <div id="ab5" style="display:none">
+      <div class="card"><div class="sh"><div class="si g"><i class="ti ti-salad"></i></div><div class="st">Alimentação</div></div>
+        <div class="fl"><label>Refeições/dia</label><div class="opts" id="aref"><button class="opt" onclick="ao('aref',this,'1-2')">1–2</button><button class="opt" onclick="ao('aref',this,'3')">3</button><button class="opt" onclick="ao('aref',this,'4-5')">4–5</button><button class="opt" onclick="ao('aref',this,'6+')">6+</button></div></div>
+        <div class="fl"><label>Ultraprocessados</label><div class="opts" id="ault"><button class="opt" onclick="ao('ault',this,'raramente')">Raramente</button><button class="opt" onclick="ao('ault',this,'as vezes')">Às vezes</button><button class="opt" onclick="ao('ault',this,'diario')">Todo dia</button><button class="opt" onclick="ao('ault',this,'varias')">Várias/dia</button></div></div>
+        <div class="fl"><label>Bebidas açucaradas?</label><div class="yn" id="aba"><button class="yb" onclick="ay('aba',this,true)">Sim</button><button class="yb" onclick="ay('aba',this,false)">Não</button></div></div>
+        <div class="fl" style="margin-bottom:0"><label>Jejum intermitente?</label><div class="yn" id="ajj"><button class="yb" onclick="ay('ajj',this,true)">Sim</button><button class="yb" onclick="ay('ajj',this,false)">Não</button></div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(4)">← Voltar</button><button class="btn-p" onclick="ag(6)">Continuar →</button></div>
+    </div>
+    <div id="ab6" style="display:none">
+      <div class="card"><div class="sh"><div class="si t"><i class="ti ti-run"></i></div><div class="st">Estilo de vida</div></div>
+        <div class="fl"><label>Atividade física</label><div class="opts" id="aat"><button class="opt" onclick="ao('aat',this,'sedentario')">Sedentário</button><button class="opt" onclick="ao('aat',this,'leve')">Leve</button><button class="opt" onclick="ao('aat',this,'moderado')">Moderado</button><button class="opt" onclick="ao('aat',this,'intenso')">Intenso</button></div></div>
+        <div class="g2"><div class="fl"><label>Horas de sono/noite</label><input type="number" id="ahs" placeholder="7" min="3" max="12" step="0.5"></div><div class="fl"><label>Qualidade do sono</label><select id="aqs"><option value="">Selecione</option><option>ruim</option><option>regular</option><option>boa</option><option>otima</option></select></div></div>
+        <div class="fl"><label>Nível de estresse</label><div class="opts" id="ast"><button class="opt" onclick="ao('ast',this,'baixo')">Baixo</button><button class="opt" onclick="ao('ast',this,'medio')">Médio</button><button class="opt" onclick="ao('ast',this,'alto')">Alto</button><button class="opt" onclick="ao('ast',this,'muito alto')">Muito alto</button></div></div>
+        <div class="fl" style="margin-bottom:0"><label>Trabalho sentado?</label><div class="yn" id="asen"><button class="yb" onclick="ay('asen',this,true)">Sim</button><button class="yb" onclick="ay('asen',this,false)">Não</button></div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(5)">← Voltar</button><button class="btn-p" onclick="ag(7)">Continuar →</button></div>
+    </div>
+    <div id="ab7" style="display:none">
+      <div class="card"><div class="sh"><div class="si a"><i class="ti ti-heart-rate"></i></div><div class="st">Sintomas</div></div>
+        <div class="fl"><label>Cansaço após refeições?</label><div class="yn" id="acn"><button class="yb" onclick="ay('acn',this,true)">Sim</button><button class="yb" onclick="ay('acn',this,false)">Não</button></div></div>
+        <div class="fl"><label>Fome logo após comer?</label><div class="yn" id="afm"><button class="yb" onclick="ay('afm',this,true)">Sim</button><button class="yb" onclick="ay('afm',this,false)">Não</button></div></div>
+        <div class="fl"><label>Craving por doces?</label><div class="yn" id="acr"><button class="yb" onclick="ay('acr',this,true)">Sim</button><button class="yb" onclick="ay('acr',this,false)">Não</button></div></div>
+        <div class="fl"><label>Dificuldade de perder peso?</label><div class="yn" id="adp"><button class="yb" onclick="ay('adp',this,true)">Sim</button><button class="yb" onclick="ay('adp',this,false)">Não</button></div></div>
+        <div class="fl" style="margin-bottom:0"><label>Acantose (pele escura em dobras)?</label><div class="yn" id="aac"><button class="yb" onclick="ay('aac',this,true)">Sim</button><button class="yb" onclick="ay('aac',this,false)">Não</button></div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(6)">← Voltar</button><button class="btn-p" onclick="ag(8)">Continuar →</button></div>
+    </div>
+    <div id="ab8" style="display:none">
+      <div class="card"><div class="sh"><div class="si b"><i class="ti ti-pill"></i></div><div class="st">Medicamentos e suplementos</div></div>
+        <div class="fl"><label>Medicamentos em uso</label><textarea id="amed" placeholder="Ex: metformina 500mg..."></textarea></div>
+        <div class="fl" style="margin-bottom:0"><label>Suplementos em uso</label><textarea id="asup" placeholder="Ex: ômega-3, vitamina D..."></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(7)">← Voltar</button><button class="btn-p" onclick="ag(9)">Continuar →</button></div>
+    </div>
+    <div id="ab9" style="display:none">
+      <div class="card"><div class="sh"><div class="si t"><i class="ti ti-target"></i></div><div class="st">Objetivo principal</div></div>
+        <div class="fl" style="margin-bottom:0"><label>O que você quer alcançar?</label><div class="opts" id="aobj" style="grid-template-columns:1fr">
+          <button class="opt" onclick="ao('aobj',this,'perder peso')">Perder peso</button>
+          <button class="opt" onclick="ao('aobj',this,'controlar glicemia')">Controlar glicemia</button>
+          <button class="opt" onclick="ao('aobj',this,'mais energia')">Ter mais energia</button>
+          <button class="opt" onclick="ao('aobj',this,'reverter ri')">Reverter resistência insulínica</button>
+          <button class="opt" onclick="ao('aobj',this,'prevenir diabetes')">Prevenir diabetes</button>
+        </div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(8)">← Voltar</button><button class="btn-p" onclick="saveAna()"><i class="ti ti-check"></i> Salvar perfil</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- EVOLUÇÃO -->
+<div class="pg" id="p-reg">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem"><button class="bk" onclick="go('p-home')"><i class="ti ti-arrow-left"></i></button><span style="font-size:16px;font-weight:500">Evolução</span></div>
+  <div class="tab-row"><button class="tab on" onclick="rtab('registrar',this)">Registrar</button><button class="tab" onclick="rtab('curva',this)">Curva</button><button class="tab" onclick="rtab('historico',this)">Histórico</button></div>
+  <div id="r-reg">
+    <div class="card"><div class="sh"><div class="si t"><i class="ti ti-ruler"></i></div><div class="st">Medidas de hoje</div></div>
+      <div class="g2"><div class="fl"><label>Peso (kg)</label><input type="number" id="rpe" placeholder="78" step="0.1"></div><div class="fl"><label>Circ. abdominal</label><input type="number" id="rca" placeholder="92"></div></div>
+      <div class="g2"><div class="fl"><label>Glicemia jejum (mg/dL)</label><input type="number" id="rgl" placeholder="100"></div><div class="fl"><label>Glicemia pós-ref.</label><input type="number" id="rgp" placeholder="mg/dL"></div></div>
+    </div>
+    <div class="card"><div class="sh"><div class="si a"><i class="ti ti-battery"></i></div><div class="st">Como você se sentiu</div></div>
+      <div class="fl"><label>Energia (1–10)</label><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="10" value="5" id="ren" style="flex:1;accent-color:var(--t)" oninput="document.getElementById('ven').textContent=this.value"><span id="ven" style="font-size:15px;font-weight:500;min-width:20px">5</span></div></div>
+      <div class="fl"><label>Sono (1–10)</label><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="10" value="5" id="rsn" style="flex:1;accent-color:var(--t)" oninput="document.getElementById('vsn').textContent=this.value"><span id="vsn" style="font-size:15px;font-weight:500;min-width:20px">5</span></div></div>
+      <div class="fl"><label>Craving (1–10)</label><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="10" value="5" id="rcv" style="flex:1;accent-color:var(--a4)" oninput="document.getElementById('vcv').textContent=this.value"><span id="vcv" style="font-size:15px;font-weight:500;min-width:20px">5</span></div></div>
+      <div class="fl" style="margin-bottom:0"><label>Estresse (1–10)</label><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="10" value="5" id="rst" style="flex:1;accent-color:var(--a4)" oninput="document.getElementById('vst').textContent=this.value"><span id="vst" style="font-size:15px;font-weight:500;min-width:20px">5</span></div></div>
+    </div>
+    <div class="card"><div class="sh"><div class="si g"><i class="ti ti-run"></i></div><div class="st">Atividade e alimentação</div></div>
+      <div class="fl"><label>Exercício hoje</label><div class="opts" id="rex"><button class="opt" onclick="ro('rex',this,'nenhum')">Nenhum</button><button class="opt" onclick="ro('rex',this,'caminhada')">Caminhada</button><button class="opt" onclick="ro('rex',this,'musculacao')">Musculação</button><button class="opt" onclick="ro('rex',this,'cardio')">Cardio</button></div></div>
+      <div class="fl" style="margin-bottom:0"><label>Alimentação</label><div class="opts" id="rdt"><button class="opt" onclick="ro('rdt',this,'sim')">Segui o plano</button><button class="opt" onclick="ro('rdt',this,'parcial')">Parcialmente</button><button class="opt" onclick="ro('rdt',this,'nao')">Não segui</button><button class="opt" onclick="ro('rdt',this,'jejum')">Jejum</button></div></div>
+    </div>
+    <button class="btn-p" onclick="saveReg()"><i class="ti ti-check"></i> Salvar registro de hoje</button>
+  </div>
+  <div id="r-curva" style="display:none">
+    <div class="mg" id="cmet"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem"><span style="font-size:13px;font-weight:500">Evolução</span><select id="cmt" onchange="renderChart()" style="font-size:12px;padding:4px 8px;border-radius:var(--rm);border:.5px solid var(--bd)"><option value="peso">Peso</option><option value="ca">Circ. abd.</option><option value="glic">Glicemia</option><option value="energia">Energia</option><option value="sono">Sono</option><option value="stress">Estresse</option></select></div>
+      <div style="position:relative;width:100%;height:200px"><canvas id="ec"></canvas></div>
+    </div>
+    <div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:.75rem">Energia vs Estresse</div><div style="position:relative;width:100%;height:160px"><canvas id="wc"></canvas></div></div>
+  </div>
+  <div id="r-hist" style="display:none"><div id="hlist"></div></div>
+</div>
+
+<!-- RECEITAS -->
+<div class="pg" id="p-rec">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+    <button class="bk" id="recbk" onclick="voltarRec()" style="display:none"><i class="ti ti-arrow-left"></i></button>
+    <span style="font-size:16px;font-weight:500" id="rectit">Receitas</span>
+  </div>
+  <div id="rec-lista">
+    <input type="text" id="recbusca" placeholder="Buscar receita ou ingrediente..." style="margin-bottom:.75rem" oninput="renderRec()">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.875rem" id="recfil"></div>
+    <div class="rg" id="recgrid"></div>
+  </div>
+  <div id="rec-det" style="display:none"></div>
+</div>
+
+<!-- BIBLIOTECA -->
+<div class="pg" id="p-bib">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem"><button class="bk" onclick="bibBack()"><i class="ti ti-arrow-left"></i></button><span style="font-size:16px;font-weight:500">Biblioteca</span></div>
+  <div class="tab-row"><button class="tab on" onclick="bibtab('l',this)">Textos</button><button class="tab" id="bib-et" onclick="bibtab('e',this)" style="display:none">+ Criar</button></div>
+  <div id="bib-l">
+    <div id="bib-lw">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.875rem" id="bifil"></div>
+      <div id="bibart"></div>
+    </div>
+    <div class="lrw" id="bib-lr">
+      <button onclick="voltarBib()" style="background:none;border:none;cursor:pointer;color:var(--m);font-family:inherit;font-size:13px;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:1rem"><i class="ti ti-arrow-left"></i> voltar</button>
+      <div id="bib-lrc"></div>
+    </div>
+  </div>
+  <div id="bib-e" style="display:none">
+    <div class="card">
+      <div class="fl"><label>Título</label><input type="text" id="btit" placeholder="Título do texto"></div>
+      <div class="fl"><label>Categoria</label><div class="opts" id="bcat"><button class="opt" onclick="bc(this,'nutricao')">Nutrição</button><button class="opt" onclick="bc(this,'exercicio')">Exercício</button><button class="opt" onclick="bc(this,'geral')">Geral</button><button class="opt" onclick="bc(this,'fisiopatologia')">Fisiopatologia</button><button class="opt" onclick="bc(this,'suplementacao')">Suplementação</button></div></div>
+      <div class="fl">
+        <label>Conteúdo</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('bold')"><strong>N</strong></button>
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('italic')"><em>I</em></button>
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('formatBlock',false,'h2')">T1</button>
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('formatBlock',false,'h3')">T2</button>
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('insertUnorderedList')">• lista</button>
+          <button class="tb" onclick="document.getElementById('edt').focus();document.execCommand('insertHTML',false,'<blockquote>Citação...</blockquote><p></p>')" style="background:var(--t50);color:var(--t800)">❝</button>
+        </div>
+        <div id="edt" class="edt" contenteditable="true"></div>
+      </div>
+      <button class="btn-p" onclick="pubArt()"><i class="ti ti-send"></i> Publicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMUNIDADE -->
+<div class="pg" id="p-com">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem"><button class="bk" onclick="go('p-home')"><i class="ti ti-arrow-left"></i></button><span style="font-size:16px;font-weight:500">Comunidade</span></div>
+  <div class="tab-row" id="ctabs">
+    <button class="tab on" onclick="ctab('d',this)">Experiências</button>
+    <button class="tab" onclick="ctab('e',this)">Compartilhar</button>
+    <button class="tab" onclick="ctab('m',this)" id="ctbm" style="display:none">Moderar <span id="mbdg" style="background:var(--a4);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px">0</span></button>
+  </div>
+  <div id="c-d">
+    <div class="mg" id="cstats"></div>
+    <div id="cdeps"></div>
+  </div>
+  <div id="c-e" style="display:none">
+    <div id="cok" style="display:none;background:var(--g50);border:.5px solid var(--g100);border-radius:var(--r);padding:1.25rem;text-align:center;margin-bottom:.75rem">
+      <i class="ti ti-circle-check" style="font-size:28px;color:#3B6D11;display:block;margin-bottom:.5rem"></i>
+      <p style="font-size:14px;color:var(--g800);line-height:1.5">Enviado! Aparecerá após aprovação.</p>
+      <button onclick="resetDep()" style="margin-top:.875rem;padding:8px 18px;background:var(--t);border:none;border-radius:var(--rm);font-size:13px;color:#fff;cursor:pointer;font-family:inherit">Enviar outro</button>
+    </div>
+    <div id="cform">
+      <div class="card"><div class="sh"><div class="si t"><i class="ti ti-user"></i></div><div class="st">Sobre você</div></div>
+        <div class="fl"><label>Nome</label><input type="text" id="dn" placeholder="Seu nome ou apelido"></div>
+        <div class="fl"><label>Cidade (opcional)</label><input type="text" id="dc" placeholder="Ex: São Paulo, SP"></div>
+        <div class="fl" style="margin-bottom:0"><label>Tempo no programa</label><div class="opts" id="dt"><button class="opt" onclick="ro('dt',this,'menos de 1 mês')">< 1 mês</button><button class="opt" onclick="ro('dt',this,'1 a 3 meses')">1–3 meses</button><button class="opt" onclick="ro('dt',this,'3 a 6 meses')">3–6 meses</button><button class="opt" onclick="ro('dt',this,'mais de 6 meses')">6+ meses</button></div></div>
+      </div>
+      <div class="card"><div class="sh"><div class="si a"><i class="ti ti-star"></i></div><div class="st">Avaliação</div></div>
+        <div class="fl"><label>Nota</label><div class="sr" id="dstars"><span class="str" onclick="setStar(1)">★</span><span class="str" onclick="setStar(2)">★</span><span class="str" onclick="setStar(3)">★</span><span class="str" onclick="setStar(4)">★</span><span class="str" onclick="setStar(5)">★</span></div></div>
+        <div class="fl" style="margin-bottom:0"><label>Resultado principal</label><select id="dres"><option value="">Selecione...</option><option>Perdi peso</option><option>Glicemia controlada</option><option>Mais energia</option><option>Menos craving</option><option>Melhorei exames</option><option>Sono melhor</option><option>Ainda no início</option></select></div>
+      </div>
+      <div class="card"><div class="sh"><div class="si g"><i class="ti ti-message-circle"></i></div><div class="st">Sua história</div></div>
+        <div class="fl"><label>Conte sua experiência</label><textarea id="dtx" placeholder="O que mudou na sua vida?"></textarea></div>
+        <div class="fl" style="margin-bottom:0"><label>Dica para quem está começando (opcional)</label><textarea id="ddk" placeholder="O que você gostaria de ter sabido antes?" style="min-height:60px"></textarea></div>
+      </div>
+      <button class="btn-p" onclick="envDep()"><i class="ti ti-send"></i> Enviar depoimento</button>
+      <div style="background:var(--a50);border-radius:var(--rm);padding:.625rem .875rem;font-size:12px;color:var(--a800);margin-top:.75rem;line-height:1.5"><i class="ti ti-info-circle"></i> Será revisado antes de aparecer para todos.</div>
+    </div>
+  </div>
+  <div id="c-m" style="display:none">
+    <div id="mauth">
+      <div style="text-align:center;padding:1.5rem 0"><i class="ti ti-shield-lock" style="font-size:28px;color:var(--m);display:block;margin-bottom:.75rem"></i>
+        <p style="font-size:13px;color:var(--m);margin-bottom:.875rem">Área do administrador</p>
+        <div style="display:flex;gap:8px"><input type="password" id="mspw" placeholder="Senha admin" onkeydown="if(event.key==='Enter')checkMod()"><button onclick="checkMod()" style="padding:0 16px;background:var(--t);border:none;border-radius:var(--rm);color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap">Entrar</button></div>
+        <div style="font-size:11px;color:var(--m);margin-top:.5rem">Senha padrão: <strong>admin123</strong></div>
+      </div>
+    </div>
+    <div id="mpanel" style="display:none">
+      <div class="mg" id="mstats"></div>
+      <div id="mfila"></div>
+      <button onclick="exitMod()" style="width:100%;padding:9px;background:none;border:.5px solid var(--bd2);border-radius:var(--rm);font-size:12px;color:var(--m);cursor:pointer;font-family:inherit;margin-top:.5rem">Sair da moderação</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECOMENDAÇÕES IA -->
+<div class="pg" id="p-ia">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem"><button class="bk" onclick="go('p-home')"><i class="ti ti-arrow-left"></i></button><span style="font-size:16px;font-weight:500">IA Personalizada</span></div>
+  <div id="ia-g">
+    <div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t800);line-height:1.5"><i class="ti ti-sparkles" style="font-size:14px;vertical-align:-2px"></i> Recomendações geradas com base no seu perfil da anamnese.</div>
+    <div class="modg">
+      <button class="modc" onclick="openIA('nutri')"><div class="modi ig"><i class="ti ti-salad"></i></div><div class="mn">Nutrição</div><div class="md">Plano alimentar</div></button>
+      <button class="modc" onclick="openIA('exerc')"><div class="modi it"><i class="ti ti-run"></i></div><div class="mn">Exercício</div><div class="md">Plano de treino</div></button>
+      <button class="modc" onclick="openIA('sono')"><div class="modi ib"><i class="ti ti-moon"></i></div><div class="mn">Sono</div><div class="md">Protocolo noturno</div></button>
+      <button class="modc" onclick="openIA('suple')"><div class="modi ia"><i class="ti ti-pill"></i></div><div class="mn">Suplementação</div><div class="md">Stack evidenciada</div></button>
+    </div>
+  </div>
+  <div id="ia-p" style="display:none">
+    <button onclick="document.getElementById('ia-g').style.display='block';document.getElementById('ia-p').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--m);font-family:inherit;font-size:13px;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:1rem"><i class="ti ti-arrow-left"></i> Voltar</button>
+    <div id="ia-c"></div>
+  </div>
+</div>
+
+</div><!-- /pc -->
+
+<nav class="bnav">
+  <button class="nb on" onclick="go('p-home')" id="nb-home"><i class="ti ti-home"></i><span>Início</span></button>
+  <button class="nb" onclick="go('p-reg')" id="nb-reg"><i class="ti ti-chart-line"></i><span>Evolução</span></button>
+  <button class="nb" onclick="go('p-rec')" id="nb-rec"><i class="ti ti-salad"></i><span>Receitas</span></button>
+  <button class="nb" onclick="go('p-com')" id="nb-com"><i class="ti ti-messages"></i><span>Comunidade</span></button>
+  <button class="nb" onclick="go('p-ana')" id="nb-per"><i class="ti ti-user"></i><span>Perfil</span></button>
+</nav>
+</div><!-- /app -->
+
+<script>
+const SU='https://snlblbicczqwhtcahyfb.supabase.co';
+const SK='sb_publishable_XN6_sUtEfqYXdx7XjaqxTg_umu5X6s0';
+const db=supabase.createClient(SU,SK);
+
+let U=null,ANA={},REGS=[],ARTS=[],DEPS=[],FAVS=new Set();
+let SV=0,bcv=null,modOk=false,rsel={},ad={};
+let EC=null,WC=null;
+
+// ── TOAST ──
+function toast(m,e=false){const t=document.getElementById('tst');document.getElementById('tm').textContent=m;t.style.background=e?'#791F1F':'#085041';t.style.display='flex';setTimeout(()=>t.style.display='none',2500);}
+
+// ── AUTH ──
+function showLogin(){document.getElementById('lc').style.display='block';document.getElementById('tc').style.display='none';}
+function showTroca(){document.getElementById('lc').style.display='none';document.getElementById('tc').style.display='block';}
+
+async function login(){
+  const email=document.getElementById('le').value.trim(),pw=document.getElementById('ls').value;
+  const btn=document.getElementById('blg'),err=document.getElementById('le2');
+  err.style.display='none';btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Entrando...';
+  const{data,error}=await db.auth.signInWithPassword({email,password:pw});
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-login"></i> Entrar';
+  if(error){err.textContent='E-mail ou senha incorretos.';err.style.display='block';return;}
+  initApp(data.user);
+}
+
+async function trocar(){
+  const email=document.getElementById('te').value.trim(),temp=document.getElementById('tt').value,nova=document.getElementById('tn').value,conf=document.getElementById('tc2').value;
+  const btn=document.getElementById('btc'),err=document.getElementById('te2'),info=document.getElementById('ti2');
+  err.style.display='none';info.style.display='none';
+  if(nova.length<8){err.textContent='Mínimo 8 caracteres.';err.style.display='block';return;}
+  if(nova!==conf){err.textContent='As senhas não coincidem.';err.style.display='block';return;}
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Ativando...';
+  const{data,error}=await db.auth.signInWithPassword({email,password:temp});
+  if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-key"></i> Ativar conta';err.textContent='Senha temporária incorreta.';err.style.display='block';return;}
+  const{error:e2}=await db.auth.updateUser({password:nova});
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-key"></i> Ativar conta';
+  if(e2){err.textContent='Erro ao salvar senha.';err.style.display='block';return;}
+  info.textContent='✓ Conta ativada! Redirecionando...';info.style.display='block';
+  setTimeout(()=>initApp(data.user),1500);
+}
+
+async function logout(){await db.auth.signOut();U=null;document.getElementById('app').style.display='none';document.getElementById('auth').style.display='flex';}
+
+async function initApp(user){
+  U=user;
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('ubadge').textContent=user.email.split('@')[0];
+  await loadData();
+  renderHome();
+  const isAdmin=user.email==='suporte@insulinresistance.com.br'||user.email.includes('admin')||user.app_metadata?.role==='admin';
+  if(isAdmin){document.getElementById('ctbm').style.display='';document.getElementById('bib-et').style.display='';}
+}
+
+async function loadData(){
+  try{const{data}=await db.from('anamneses').select('*').eq('user_id',U.id).single();if(data)ANA=data;}catch(e){}
+  try{const{data}=await db.from('registros').select('*').eq('user_id',U.id).order('data',{ascending:true});if(data)REGS=data;}catch(e){}
+  try{const{data}=await db.from('artigos').select('*').eq('publicado',true).order('criado_em',{ascending:false});if(data)ARTS=data;}catch(e){}
+  try{const{data}=await db.from('depoimentos').select('*').eq('status','aprovado').order('likes',{ascending:false});if(data)DEPS=data;}catch(e){}
+  try{const{data}=await db.from('favoritos').select('receita_id').eq('user_id',U.id);if(data)data.forEach(f=>FAVS.add(f.receita_id));}catch(e){}
+}
+
+// ── NAV ──
+const NM={'p-home':'nb-home','p-reg':'nb-reg','p-rec':'nb-rec','p-com':'nb-com','p-ana':'nb-per'};
+function go(p){
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+  document.getElementById(p).classList.add('on');
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  if(NM[p])document.getElementById(NM[p]).classList.add('on');
+  document.querySelector('.pc').scrollTop=0;
+  if(p==='p-home')renderHome();
+  if(p==='p-rec')renderRec();
+  if(p==='p-bib')renderBib();
+  if(p==='p-com')renderCom();
+  if(p==='p-ana')renderAna();
+}
+
+// ── HOME ──
+function renderHome(){
+  const n=ANA?.nome?.split(' ')[0]||U?.email?.split('@')[0]||'';
+  document.getElementById('gnome').textContent='Olá, '+n+'!';
+  const h=new Date().getHours();
+  document.getElementById('gsub').textContent=(h<12?'Bom dia':h<18?'Boa tarde':'Boa noite')+'. Bem-vinda de volta.';
+  const u=REGS.length?REGS[REGS.length-1]:{};
+  document.getElementById('hpeso').innerHTML=(u.peso||'—')+'<span class="mu">kg</span>';
+  document.getElementById('hhoma').textContent=ANA?.homa||'—';
+  const avg=REGS.slice(-7).reduce((a,r)=>a+(r.energia||0),0)/Math.max(1,Math.min(REGS.length,7));
+  document.getElementById('hen').innerHTML=(Math.round(avg)||'—')+'<span class="mu">/10</span>';
+  document.getElementById('hreg').textContent=REGS.length;
+}
+
+// ── ANAMNESE ──
+const AL=['Identif.','Medidas','Clínico','Exames','Aliment.','Estilo','Sintomas','Medic.','Objetivo'];
+function renderAna(){
+  if(ANA?.nome){
+    document.getElementById('ana-res').style.display='block';
+    document.getElementById('ana-frm').style.display='none';
+    const ini=ANA.nome.split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
+    document.getElementById('pini').textContent=ini;
+    document.getElementById('pnm').textContent=ANA.nome;
+    document.getElementById('peml').textContent=U.email;
+    let h='';
+    if(ANA.peso)h+=`<div class="mc"><div class="ml">Peso</div><div class="mv">${ANA.peso}<span class="mu">kg</span></div></div>`;
+    if(ANA.homa)h+=`<div class="mc"><div class="ml">HOMA-IR</div><div class="mv">${ANA.homa}</div></div>`;
+    if(ANA.obj)h+=`<div class="mc"><div class="ml">Objetivo</div><div class="mv" style="font-size:13px">${ANA.obj}</div></div>`;
+    if(ANA.ativ)h+=`<div class="mc"><div class="ml">Atividade</div><div class="mv" style="font-size:13px">${ANA.ativ}</div></div>`;
+    document.getElementById('pmet').innerHTML=h;
+  }else{
+    document.getElementById('ana-res').style.display='none';
+    document.getElementById('ana-frm').style.display='block';
+    ag(1);
+  }
+}
+function editAna(){document.getElementById('ana-res').style.display='none';document.getElementById('ana-frm').style.display='block';ag(1);if(ANA.nome)document.getElementById('an').value=ANA.nome;}
+function ag(n){
+  for(let i=1;i<=9;i++){const e=document.getElementById('ab'+i);if(e)e.style.display=i===n?'block':'none';}
+  document.getElementById('aprog').style.width=Math.max(11,Math.round((n-1)/9*100))+'%';
+  document.getElementById('aplbl').textContent='Bloco '+n+' de 9';
+  document.getElementById('achips').innerHTML=AL.map((l,i)=>{const s=i+1<n?'d':i+1===n?'c':'';return`<span class="sc ${s}">${i+1<n?'✓ ':''}`+l+'</span>';}).join('');
+  if(n===3){const s=document.getElementById('asop');if(s)s.style.display=ad.sexo==='F'?'block':'none';}
+}
+function ao(g,btn,v){document.querySelectorAll('#'+g+' .opt').forEach(b=>b.classList.remove('on'));btn.classList.add('on');ad[g]=v;}
+function ay(g,btn,v){document.querySelectorAll('#'+g+' .yb').forEach(b=>b.classList.remove('sy','sn'));btn.classList.add(v?'sy':'sn');ad[g]=v;}
+function choma(){
+  const g=parseFloat(document.getElementById('agl').value),i=parseFloat(document.getElementById('ains').value);
+  if(g&&i){const h=(g*i/405).toFixed(2);ad.homa=parseFloat(h);const cls=h<2?'ok':h<2.5?'at':'al';const lb=h<2?'normal':h<2.5?'atenção':'alterado';document.getElementById('ahval').innerHTML=h+` <span class="bdg ${cls}">${lb}</span>`;document.getElementById('ahbox').style.display='flex';}
+  else document.getElementById('ahbox').style.display='none';
+}
+function cimc(){const p=parseFloat(document.getElementById('ape').value),h=parseFloat(document.getElementById('aal').value)||parseFloat(ANA.altura)||0;if(p&&h){const imc=(p/((h/100)**2)).toFixed(1);document.getElementById('aimc').value=imc;ad.imc=parseFloat(imc);}}
+function crcq(){const ca=parseFloat(document.getElementById('aca').value),cq=parseFloat(document.getElementById('acq').value);if(ca&&cq){const r=(ca/cq).toFixed(2);ad.rcq=parseFloat(r);document.getElementById('arcqv').textContent=r;document.getElementById('arcq').style.display='flex';}}
+async function saveAna(){
+  const p={user_id:U.id,nome:document.getElementById('an').value||ANA.nome,nasc:document.getElementById('anas').value,altura:document.getElementById('aal').value||ANA.altura,sexo:ad.asx||ANA.sexo,peso:document.getElementById('ape').value||ANA.peso,ca:document.getElementById('aca').value,cq:document.getElementById('acq').value,imc:ad.imc,rcq:ad.rcq,diab:ad.adb,prediab:ad.apd,hiper:ad.ahp,sindmet:ad.asm,sop:ad.asp,esteat:ad.aeh,famdiab:ad.afd,glic:document.getElementById('agl').value,insu:document.getElementById('ains').value,homa:ad.homa,hba1c:document.getElementById('ahb').value,tg:document.getElementById('atg').value,hdl:document.getElementById('ahdl').value,tsh:document.getElementById('atsh').value,refeicoes:ad.aref,ultra:ad.ault,bebac:ad.aba,jejum:ad.ajj,ativ:ad.aat,hsono:document.getElementById('ahs').value,qsono:document.getElementById('aqs').value,stress:ad.ast,sentado:ad.asen,cansaco:ad.acn,fome:ad.afm,craving:ad.acr,dificpeso:ad.adp,acantose:ad.aac,meds:document.getElementById('amed').value,sups:document.getElementById('asup').value,obj:ad.aobj};
+  const{error}=await db.from('anamneses').upsert(p,{onConflict:'user_id'});
+  if(error){toast('Erro ao salvar.',true);return;}
+  ANA=p;toast('Perfil salvo!');renderAna();renderHome();
+}
+
+// ── REGISTRO ──
+function ro(g,btn,v){document.querySelectorAll('#'+g+' .opt').forEach(b=>b.classList.remove('on'));btn.classList.add('on');rsel[g]=v;}
+function rtab(t,btn){
+  ['r-reg','r-curva','r-hist'].forEach(x=>document.getElementById(x).style.display='none');
+  document.getElementById('r-'+t.substring(0,3)).style.display='block';
+  document.querySelectorAll('#p-reg .tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  if(t==='curva'){renderCurMet();renderChart();}
+  if(t==='historico')renderHist();
+}
+function rtab(t,btn){
+  document.getElementById('r-reg').style.display=t==='registrar'?'block':'none';
+  document.getElementById('r-curva').style.display=t==='curva'?'block':'none';
+  document.getElementById('r-hist').style.display=t==='historico'?'block':'none';
+  document.querySelectorAll('#p-reg .tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  if(t==='curva'){renderCurMet();renderChart();}
+  if(t==='historico')renderHist();
+}
+async function saveReg(){
+  const p={user_id:U.id,data:new Date().toISOString().split('T')[0],peso:parseFloat(document.getElementById('rpe').value)||null,ca:parseFloat(document.getElementById('rca').value)||null,glic:parseFloat(document.getElementById('rgl').value)||null,glic_pos:parseFloat(document.getElementById('rgp').value)||null,energia:parseInt(document.getElementById('ren').value),sono:parseInt(document.getElementById('rsn').value),craving:parseInt(document.getElementById('rcv').value),stress:parseInt(document.getElementById('rst').value),exercicio:rsel['rex']||null,dieta:rsel['rdt']||null};
+  const{error}=await db.from('registros').upsert(p,{onConflict:'user_id,data'});
+  if(error){toast('Erro ao salvar.',true);return;}
+  const idx=REGS.findIndex(r=>r.data===p.data);
+  if(idx>=0)REGS[idx]=p;else REGS.push(p);
+  REGS.sort((a,b)=>a.data.localeCompare(b.data));
+  toast('Registro salvo!');renderHome();
+}
+function fd(d){const p=(d||'').split('T')[0].split('-');return p[2]+'/'+p[1];}
+function renderCurMet(){
+  if(!REGS.length)return;
+  const u=REGS[REGS.length-1],v=REGS.length>1?REGS[REGS.length-2]:{};
+  function mc(l,c,p,un,lb){if(!c)return'';const d=p&&p!==c?(c-p).toFixed(1):null;const b=d&&((lb&&d<0)||(!lb&&d>0));const cs=b?'color:#3B6D11':d?'color:#A32D2D':'color:var(--m)';return`<div class="mc"><div class="ml">${l}</div><div class="mv">${c}<span class="mu">${un}</span></div><div style="font-size:11px;margin-top:3px;${cs}">${d?(d>0?'▲':'▼')+Math.abs(d):''}</div></div>`;}
+  const avg=Math.round(REGS.slice(-7).reduce((a,r)=>a+(r.energia||5),0)/Math.min(REGS.length,7));
+  const gl=REGS.filter(r=>r.glic);
+  document.getElementById('cmet').innerHTML=mc('Último peso',u.peso,v.peso,'kg',true)+mc('Circ. abd.',u.ca,v.ca,'cm',true)+`<div class="mc"><div class="ml">Energia média</div><div class="mv">${avg}<span class="mu">/10</span></div></div>`+(gl.length?mc('Glicemia',gl[gl.length-1].glic,gl.length>1?gl[gl.length-2].glic:null,'',true):'');
+}
+function renderChart(){
+  const m=document.getElementById('cmt').value;
+  const d=REGS.filter(r=>r[m]!=null);
+  if(EC)EC.destroy();if(WC)WC.destroy();
+  if(!d.length)return;
+  const ctx=document.getElementById('ec').getContext('2d');
+  EC=new Chart(ctx,{type:'line',data:{labels:d.map(r=>fd(r.data)),datasets:[{label:m,data:d.map(r=>r[m]),borderColor:'#1D9E75',backgroundColor:'#1D9E7522',borderWidth:2,pointRadius:3,fill:true,tension:.35}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#6B6B65'},grid:{display:false}},y:{ticks:{font:{size:10},color:'#6B6B65'},grid:{color:'rgba(0,0,0,.05)'}}}}});
+  const w=REGS.filter(r=>r.energia&&r.stress);
+  if(w.length){const wc=document.getElementById('wc').getContext('2d');WC=new Chart(wc,{type:'line',data:{labels:w.map(r=>fd(r.data)),datasets:[{label:'Energia',data:w.map(r=>r.energia),borderColor:'#1D9E75',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.35},{label:'Estresse',data:w.map(r=>r.stress),borderColor:'#D85A30',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.35,borderDash:[4,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#6B6B65'},grid:{display:false}},y:{min:0,max:10,ticks:{font:{size:10},color:'#6B6B65',stepSize:2},grid:{color:'rgba(0,0,0,.05)'}}}}})}
+}
+function renderHist(){
+  const el=document.getElementById('hlist');
+  if(!REGS.length){el.innerHTML='<div class="empty"><i class="ti ti-clipboard-text"></i>Nenhum registro ainda.</div>';return;}
+  el.innerHTML=[...REGS].reverse().map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem .875rem;background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);margin-bottom:6px"><span style="font-size:12px;color:var(--m)">${fd(r.data)}</span><div style="display:flex;gap:10px">${r.peso?`<span style="font-size:13px;font-weight:500">${r.peso}<span style="font-size:11px;color:var(--m)">kg</span></span>`:''}<span style="font-size:13px;font-weight:500">${r.energia}<span style="font-size:11px;color:var(--m)">en</span></span></div></div>`).join('');
+}
+
+// ── RECEITAS ──
+const RECS=[
+  {id:'r1',nome:'Omelete de espinafre com cottage',cat:'cafe',foto:'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=400&q=80',tempo:'10 min',ig:'baixo',macros:{prot:'28g',carb:'4g',gord:'14g',fibra:'2g'},dri:'Ovos + espinafre no café eliminam o pico glicêmico matinal e mantêm saciedade por 4-5h. Proteína cedo reduz o craving à tarde.',ings:[{n:'Ovos',q:'3 und.',s:true},{n:'Espinafre',q:'2 xíc.',s:true},{n:'Cottage',q:'3 col.',s:true},{n:'Alho',q:'1 dente',s:true},{n:'Azeite',q:'1 col.',s:true}],passos:['Refogue o alho no azeite 1 min.','Adicione espinafre até murchar. Reserve.','Bata ovos com sal e pimenta.','Despeje na frigideira. Quando firmar, adicione o recheio.','Dobre e tampe 1 min.']},
+  {id:'r2',nome:'Bowl de frango com quinoa',cat:'almoco',foto:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80',tempo:'25 min',ig:'baixo',macros:{prot:'42g',carb:'38g',gord:'12g',fibra:'8g'},dri:'Quinoa tem IG 53 e proteína completa. Iniciar pelos vegetais reduz o pico glicêmico em até 40%.',ings:[{n:'Frango',q:'300g',s:true},{n:'Quinoa cozida',q:'1 xíc.',s:true},{n:'Brócolis',q:'1 xíc.',s:true},{n:'Azeite',q:'2 col.',s:true},{n:'Limão e cúrcuma',q:'a gosto',s:true}],passos:['Tempere e grelhe o frango 6-7 min cada lado.','Refogue brócolis com azeite 4 min.','Monte: quinoa, vegetais, frango. Regue com azeite e limão.']},
+  {id:'r3',nome:'Iogurte com frutas vermelhas',cat:'lanche',foto:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&q=80',tempo:'5 min',ig:'baixo',macros:{prot:'18g',carb:'22g',gord:'14g',fibra:'4g'},dri:'Frutas vermelhas têm menor IG e são ricas em antocianinas que melhoram a sensibilidade à insulina. Castanhas do Pará fornecem selênio.',ings:[{n:'Iogurte grego natural',q:'150g',s:true},{n:'Morangos',q:'½ xíc.',s:true},{n:'Mirtilo/amora',q:'¼ xíc.',s:true},{n:'Castanhas do Pará',q:'3 und.',s:true},{n:'Canela',q:'1 pitada',s:true}],passos:['Coloque o iogurte na tigela.','Distribua as frutas.','Adicione castanhas picadas.','Finalize com canela em pó.']},
+  {id:'r4',nome:'Salmão assado com aspargos',cat:'jantar',foto:'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80',tempo:'20 min',ig:'baixo',macros:{prot:'38g',carb:'6g',gord:'22g',fibra:'3g'},dri:'Salmão é a fonte mais rica em ômega-3. Jantar com proteína e gordura boa evita o pico glicêmico noturno — o mais prejudicial ao metabolismo.',ings:[{n:'Filé de salmão',q:'2 filés',s:true},{n:'Aspargos',q:'200g',s:true},{n:'Azeite',q:'3 col.',s:true},{n:'Limão siciliano',q:'1 und.',s:true},{n:'Alho e alecrim',q:'a gosto',s:false}],passos:['Preaqueça forno a 200°C.','Tempere tudo com azeite, alho e limão.','Asse 12-15 min até o salmão soltar.']},
+  {id:'r5',nome:'Mousse de abacate com cacau',cat:'sobremesa',foto:'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&q=80',tempo:'10 min',ig:'baixo',macros:{prot:'4g',carb:'14g',gord:'18g',fibra:'8g'},dri:'Abacate + cacau 70%: gordura boa e flavonoides que melhoram a sinalização de insulina. Sobremesa que colabora com o controle metabólico.',ings:[{n:'Abacate maduro',q:'1 grande',s:true},{n:'Cacau puro em pó',q:'2 col.',s:true},{n:'Canela',q:'½ col. chá',s:true},{n:'Leite de coco',q:'3 col.',s:false},{n:'Adoçante natural',q:'a gosto',s:false}],passos:['Bata tudo no liquidificador.','Ajuste o dulçor a gosto.','Leve à geladeira 20 min.','Sirva gelado.']},
+  {id:'r6',nome:'Panqueca de banana com aveia',cat:'cafe',foto:'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=400&q=80',tempo:'15 min',ig:'medio',macros:{prot:'14g',carb:'42g',gord:'8g',fibra:'5g'},dri:'Aveia tem beta-glucana que retarda absorção de glicose. Banana levemente verde tem amido resistente que melhora a microbiota.',ings:[{n:'Banana levemente verde',q:'1 und.',s:true},{n:'Ovos',q:'2 und.',s:true},{n:'Aveia em flocos',q:'4 col.',s:true},{n:'Canela',q:'1 col. chá',s:true}],passos:['Amasse a banana com garfo.','Misture ovos, aveia e canela.','Cozinhe em fogo baixo 2 min cada lado.','Sirva com frutas vermelhas.']},
+  {id:'r7',nome:'Sopa de lentilha com cúrcuma',cat:'jantar',foto:'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&q=80',tempo:'35 min',ig:'baixo',macros:{prot:'16g',carb:'32g',gord:'6g',fibra:'12g'},dri:'Lentilha tem um dos menores IG. Cúrcuma e gengibre têm ação anti-inflamatória comprovada que melhora a sensibilidade à insulina.',ings:[{n:'Lentilha vermelha',q:'1 xíc.',s:true},{n:'Cebola e alho',q:'1+3 und.',s:false},{n:'Cúrcuma',q:'1 col. chá',s:true},{n:'Gengibre fresco',q:'1 col. chá',s:true},{n:'Caldo de legumes',q:'1 litro',s:false}],passos:['Refogue cebola e alho no azeite.','Adicione cúrcuma e gengibre. Cozinhe 2 min.','Acrescente lentilha e caldo. Leve à fervura.','Cozinhe 20-25 min. Finalize com limão.']},
+  {id:'r8',nome:'Wrap de atum com abacate',cat:'almoco',foto:'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&q=80',tempo:'10 min',ig:'medio',macros:{prot:'32g',carb:'28g',gord:'16g',fibra:'6g'},dri:'Atum rico em proteína e ômega-3. Abacate desacelera a absorção do carboidrato. Rúcula melhora a sensibilidade insulínica.',ings:[{n:'Wrap integral',q:'1 und.',s:false},{n:'Atum em água',q:'1 lata',s:true},{n:'Abacate',q:'½ und.',s:true},{n:'Rúcula',q:'1 punhado',s:true},{n:'Limão',q:'1 col.',s:true}],passos:['Amasse abacate com limão e sal.','Espalhe no wrap. Adicione atum e rúcula.','Enrole e corte ao meio.']},
+  {id:'r9',nome:'Chá funcional de canela e gengibre',cat:'lanche',foto:'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&q=80',tempo:'8 min',ig:'baixo',macros:{prot:'0g',carb:'3g',gord:'0g',fibra:'1g'},dri:'Canela Ceilão reduz glicemia pós-prandial em até 29%. Gengibre aumenta captação de glicose pelas células.',ings:[{n:'Canela em pau Ceilão',q:'2 paus',s:true},{n:'Gengibre fresco',q:'3 fatias',s:true},{n:'Cravo da índia',q:'3 und.',s:true},{n:'Água filtrada',q:'500ml',s:false}],passos:['Leve à fervura com todos os ingredientes.','Reduza o fogo. Infusão 5 min.','Coe e sirva quente.']},
+  {id:'r10',nome:'Frango ao tahine com couve-flor',cat:'jantar',foto:'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400&q=80',tempo:'30 min',ig:'baixo',macros:{prot:'44g',carb:'16g',gord:'18g',fibra:'6g'},dri:'Couve-flor substitui carboidratos de alto IG. Tahine fornece gorduras insaturadas e cálcio que contribuem para melhora da RI.',ings:[{n:'Peito de frango',q:'400g',s:true},{n:'Couve-flor',q:'½ cabeça',s:true},{n:'Tahine',q:'3 col.',s:true},{n:'Iogurte grego',q:'2 col.',s:true},{n:'Limão e alho',q:'a gosto',s:true}],passos:['Asse couve-flor a 200°C por 20 min.','Grelhe e desfie o frango.','Misture tahine, iogurte e limão para o molho.','Monte: couve-flor, frango, molho tahine.']}
+];
+const CATS={cafe:{l:'Café',cs:'cafe'},almoco:{l:'Almoço',cs:'almoco'},lanche:{l:'Lanche',cs:'lanche'},jantar:{l:'Jantar',cs:'jantar'},sobremesa:{l:'Sobremesa',cs:'sobremesa'}};
+let rfil='todos';
+
+function renderRec(){
+  const q=(document.getElementById('recbusca')?.value||'').toLowerCase();
+  const lista=RECS.filter(r=>(rfil==='todos'||r.cat===rfil)&&(!q||r.nome.toLowerCase().includes(q)||r.ings.some(i=>i.n.toLowerCase().includes(q))));
+  const grid=document.getElementById('recgrid');
+  if(!grid)return;
+  grid.innerHTML=lista.map(r=>`<div class="rc" onclick="abrirRec('${r.id}')"><img class="ri" src="${r.foto}" alt="${r.nome}" loading="lazy" onerror="this.style.display='none'"><div class="rb"><div class="rn">${r.nome}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.375rem"><span class="cc ${CATS[r.cat].cs}">${CATS[r.cat].l}</span><span class="ig-b ig-${r.ig}">IG ${r.ig}</span></div><div class="rm"><i class="ti ti-clock" style="font-size:11px"></i>${r.tempo}<button class="fb${FAVS.has(r.id)?' on':''}" onclick="event.stopPropagation();togFav('${r.id}',this)"><i class="ti ti-heart"></i></button></div></div></div>`).join('');
+  const fil=document.getElementById('recfil');
+  if(fil&&!fil.innerHTML){fil.innerHTML=['todos','cafe','almoco','lanche','jantar','sobremesa'].map(c=>`<button onclick="rfil='${c}';renderRec();document.querySelectorAll('#recfil button').forEach(b=>b.style.fontWeight='400');this.style.fontWeight='600'" style="padding:4px 10px;border:.5px solid var(--bd);border-radius:99px;background:var(--bg2);font-size:11px;color:var(--m);cursor:pointer;font-family:inherit">${c==='todos'?'Todas':CATS[c]?.l||c}</button>`).join('');}
+}
+
+function abrirRec(id){
+  const r=RECS.find(x=>x.id===id);if(!r)return;
+  document.getElementById('rec-lista').style.display='none';
+  document.getElementById('rec-det').style.display='block';
+  document.getElementById('recbk').style.display='flex';
+  document.getElementById('rectit').textContent=r.nome;
+  const cat=CATS[r.cat];
+  document.getElementById('rec-det').innerHTML=`
+    <img style="width:100%;height:190px;object-fit:cover;border-radius:var(--r);display:block;margin-bottom:1rem;background:var(--bg2)" src="${r.foto}" alt="${r.nome}" onerror="this.style.display='none'">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.875rem"><span class="cc ${cat.cs}" style="font-size:12px;padding:3px 10px">${cat.l}</span><span class="ig-b ig-${r.ig}" style="font-size:12px;padding:3px 10px">IG ${r.ig}</span><span style="font-size:12px;color:var(--m);display:flex;align-items:center;gap:4px"><i class="ti ti-clock" style="font-size:13px"></i>${r.tempo}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+      <div style="background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);padding:.625rem .875rem"><div style="font-size:11px;color:var(--m);margin-bottom:2px">Proteínas</div><div style="font-size:15px;font-weight:500">${r.macros.prot}</div></div>
+      <div style="background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);padding:.625rem .875rem"><div style="font-size:11px;color:var(--m);margin-bottom:2px">Carboidratos</div><div style="font-size:15px;font-weight:500">${r.macros.carb}</div></div>
+      <div style="background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);padding:.625rem .875rem"><div style="font-size:11px;color:var(--m);margin-bottom:2px">Gorduras</div><div style="font-size:15px;font-weight:500">${r.macros.gord}</div></div>
+      <div style="background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);padding:.625rem .875rem"><div style="font-size:11px;color:var(--m);margin-bottom:2px">Fibras</div><div style="font-size:15px;font-weight:500">${r.macros.fibra}</div></div>
+    </div>
+    <div class="drb"><div style="font-size:12px;font-weight:500;color:var(--t800);margin-bottom:.25rem;display:flex;align-items:center;gap:5px"><i class="ti ti-leaf" style="font-size:14px;color:var(--t)"></i> Por que ajuda na RI</div><div style="font-size:12px;color:var(--t800);line-height:1.5">${r.dri}</div></div>
+    <div style="font-size:13px;font-weight:500;margin-bottom:.625rem;display:flex;align-items:center;gap:6px"><i class="ti ti-basket" style="font-size:15px;color:var(--t)"></i>Ingredientes</div>
+    ${r.ings.map(i=>`<div class="ir"><span>${i.n}${i.s?'<span class="is">★</span>':''}</span><span style="color:var(--m);font-size:12px">${i.q}</span></div>`).join('')}
+    <div style="font-size:13px;font-weight:500;margin:.875rem 0 .625rem;display:flex;align-items:center;gap:6px"><i class="ti ti-chef-hat" style="font-size:15px;color:var(--t)"></i>Modo de preparo</div>
+    ${r.passos.map((p,i)=>`<div class="ps"><div class="pn">${i+1}</div><div style="font-size:13px;line-height:1.5;padding-top:3px">${p}</div></div>`).join('')}
+    <button class="btn-s" id="fbdet" onclick="togFavDet('${r.id}',this)" style="margin-top:1rem"><i class="ti ti-heart"></i> ${FAVS.has(r.id)?'Salvo nos favoritos':'Salvar nos favoritos'}</button>`;
+}
+
+function voltarRec(){document.getElementById('rec-lista').style.display='block';document.getElementById('rec-det').style.display='none';document.getElementById('recbk').style.display='none';document.getElementById('rectit').textContent='Receitas';}
+
+async function togFav(id,btn){
+  if(FAVS.has(id)){FAVS.delete(id);btn.classList.remove('on');await db.from('favoritos').delete().eq('user_id',U.id).eq('receita_id',id);}
+  else{FAVS.add(id);btn.classList.add('on');await db.from('favoritos').upsert({user_id:U.id,receita_id:id});}
+}
+async function togFavDet(id,btn){
+  if(FAVS.has(id)){FAVS.delete(id);await db.from('favoritos').delete().eq('user_id',U.id).eq('receita_id',id);btn.innerHTML='<i class="ti ti-heart"></i> Salvar nos favoritos';btn.style.background='';}
+  else{FAVS.add(id);await db.from('favoritos').upsert({user_id:U.id,receita_id:id});btn.innerHTML='<i class="ti ti-heart"></i> Salvo nos favoritos';btn.style.background='var(--r50)';}
+}
+
+// ── BIBLIOTECA ──
+let bcv=null;
+const BIBCAT={nutricao:{l:'Nutrição',bg:'var(--t50)',c:'var(--t800)'},exercicio:{l:'Exercício',bg:'var(--a50)',c:'var(--a800)'},geral:{l:'Geral',bg:'var(--g50)',c:'var(--g800)'},fisiopatologia:{l:'Fisiopatologia',bg:'var(--b50)',c:'var(--b800)'},suplementacao:{l:'Suplementação',bg:'var(--p50)',c:'var(--p800)'}};
+
+function bibBack(){
+  if(document.getElementById('bib-lr').style.display==='block')voltarBib();
+  else go('p-home');
+}
+function bibtab(t,btn){
+  document.getElementById('bib-l').style.display=t==='l'?'block':'none';
+  document.getElementById('bib-e').style.display=t==='e'?'block':'none';
+  document.querySelectorAll('#p-bib .tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  if(t==='l')renderBib();
+}
+function bc(btn,v){document.querySelectorAll('#bcat .opt').forEach(b=>b.classList.remove('on'));btn.classList.add('on');bcv=v;}
+
+function renderBib(){
+  const el=document.getElementById('bibart');
+  const fil=document.getElementById('bifil');
+  if(!el)return;
+  if(!ARTS.length){el.innerHTML='<div class="empty"><i class="ti ti-book"></i>Nenhum texto publicado ainda.</div>';return;}
+  if(fil&&!fil.innerHTML){fil.innerHTML=['todos',...Object.keys(BIBCAT)].map(c=>`<button onclick="filBib('${c}',this)" style="padding:4px 10px;border:.5px solid var(--bd);border-radius:99px;background:var(--bg2);font-size:11px;color:var(--m);cursor:pointer;font-family:inherit">${c==='todos'?'Todos':BIBCAT[c].l}</button>`).join('');}
+  el.innerHTML=ARTS.map(a=>{const cat=BIBCAT[a.categoria]||BIBCAT.geral;const w=(a.corpo||'').replace(/<[^>]+>/g,'').split(/\s+/).length;return`<div class="ac" onclick="abrirArt('${a.id}')"><span class="bdg" style="background:${cat.bg};color:${cat.c};margin-bottom:.5rem;display:inline-block">${cat.l}</span><div style="font-size:14px;font-weight:500;margin-bottom:.375rem">${a.titulo}</div><div style="font-size:11px;color:var(--m)">${Math.max(1,Math.round(w/200))} min de leitura</div></div>`;}).join('');
+}
+function filBib(cat,btn){
+  document.querySelectorAll('#bifil button').forEach(b=>b.style.fontWeight='400');if(btn)btn.style.fontWeight='600';
+  const el=document.getElementById('bibart');
+  const lista=cat==='todos'?ARTS:ARTS.filter(a=>a.categoria===cat);
+  if(!lista.length){el.innerHTML='<div class="empty"><i class="ti ti-book"></i>Nenhum texto nesta categoria.</div>';return;}
+  el.innerHTML=lista.map(a=>{const c=BIBCAT[a.categoria]||BIBCAT.geral;return`<div class="ac" onclick="abrirArt('${a.id}')"><span class="bdg" style="background:${c.bg};color:${c.c};margin-bottom:.5rem;display:inline-block">${c.l}</span><div style="font-size:14px;font-weight:500;margin-bottom:.375rem">${a.titulo}</div></div>`;}).join('');
+}
+function abrirArt(id){
+  const a=ARTS.find(x=>x.id===id);if(!a)return;
+  const cat=BIBCAT[a.categoria]||BIBCAT.geral;
+  document.getElementById('bib-lw').style.display='none';
+  document.getElementById('bib-lr').style.display='block';
+  document.getElementById('bib-lrc').innerHTML=`<span class="bdg" style="background:${cat.bg};color:${cat.c};margin-bottom:.75rem;display:inline-block">${cat.l}</span><div style="font-size:20px;font-weight:500;margin-bottom:.875rem;line-height:1.3">${a.titulo}</div><div class="lc">${a.corpo}</div>`;
+}
+function voltarBib(){document.getElementById('bib-lr').style.display='none';document.getElementById('bib-lw').style.display='block';}
+async function pubArt(){
+  const titulo=document.getElementById('btit').value.trim(),corpo=document.getElementById('edt').innerHTML.trim();
+  if(!titulo||!corpo){toast('Preencha título e conteúdo.',true);return;}
+  if(!bcv){toast('Selecione uma categoria.',true);return;}
+  const{error}=await db.from('artigos').insert({titulo,corpo,categoria:bcv,publicado:true,autor_id:U.id});
+  if(error){toast('Erro ao publicar.',true);return;}
+  document.getElementById('btit').value='';document.getElementById('edt').innerHTML='';
+  document.querySelectorAll('#bcat .opt').forEach(b=>b.classList.remove('on'));bcv=null;
+  const{data}=await db.from('artigos').select('*').eq('publicado',true).order('criado_em',{ascending:false});
+  if(data)ARTS=data;
+  toast('Texto publicado!');bibtab('l',document.querySelector('#p-bib .tab'));
+}
+
+// ── COMUNIDADE ──
+const AC=['#E1F5EE','#E6F1FB','#FAEEDA','#EEEDFE','#EAF3DE'];
+const ACT=['#085041','#0C447C','#633806','#3C3489','#27500A'];
+function ctab(t,btn){
+  ['c-d','c-e','c-m'].forEach(x=>document.getElementById(x).style.display='none');
+  document.getElementById('c-'+t).style.display='block';
+  document.querySelectorAll('#ctabs .tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  if(t==='d')renderCom();
+  if(t==='m'&&modOk)renderFila();
+}
+function renderCom(){
+  const el=document.getElementById('cdeps'),st=document.getElementById('cstats');
+  const med=DEPS.length?Math.round(DEPS.reduce((a,d)=>a+(d.nota||5),0)/DEPS.length*10)/10:0;
+  st.innerHTML=`<div class="mc"><div class="ml">Depoimentos</div><div class="mv">${DEPS.length}</div></div><div class="mc"><div class="ml">Média</div><div class="mv">${DEPS.length?med+' ★':'—'}</div></div>`;
+  if(!DEPS.length){el.innerHTML='<div class="empty"><i class="ti ti-messages"></i>Nenhum depoimento publicado ainda.</div>';return;}
+  el.innerHTML=DEPS.map(d=>{
+    const ci=d.nome.charCodeAt(0)%AC.length;
+    const ini=d.nome.split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
+    return`<div class="dpc"><div class="dpt"><div class="av" style="background:${AC[ci]};color:${ACT[ci]}">${ini}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${d.nome}${d.cidade?` · <span style="font-weight:400;font-size:12px;color:var(--m)">${d.cidade}</span>`:''}</div><div style="display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap"><span style="color:#BA7517;font-size:13px">${'★'.repeat(d.nota||5)}${'☆'.repeat(5-(d.nota||5))}</span>${d.tempo?`<span class="dtb">${d.tempo}</span>`:''}</div>${d.resultado?`<div style="font-size:11px;color:var(--m);margin-top:3px"><i class="ti ti-circle-check" style="font-size:12px;vertical-align:-1px;color:var(--t)"></i> ${d.resultado}</div>`:''}</div></div><div style="font-size:13px;line-height:1.55">${d.texto}</div>${d.dica?`<div style="background:var(--t50);border-radius:var(--rm);padding:.5rem .75rem;margin-top:.5rem;font-size:12px;color:var(--t800)"><i class="ti ti-bulb" style="font-size:13px;vertical-align:-1px"></i> ${d.dica}</div>`:''}<div style="display:flex;align-items:center;gap:8px;margin-top:.625rem;padding-top:.625rem;border-top:.5px solid var(--bd)"><button class="lkb${d._liked?' on':''}" onclick="like('${d.id}',this)"><i class="ti ti-heart"></i> ${d.likes||0}</button></div></div>`;
+  }).join('');
+}
+async function like(id,btn){const d=DEPS.find(x=>x.id===id);if(!d)return;d._liked=!d._liked;d.likes=(d.likes||0)+(d._liked?1:-1);btn.innerHTML=`<i class="ti ti-heart"></i> ${d.likes}`;btn.classList.toggle('on',d._liked);await db.from('depoimentos').update({likes:d.likes}).eq('id',id);}
+function setStar(n){SV=n;document.querySelectorAll('.str').forEach((s,i)=>s.classList.toggle('on',i<n));}
+function resetDep(){document.getElementById('cok').style.display='none';document.getElementById('cform').style.display='block';SV=0;document.querySelectorAll('.str').forEach(s=>s.classList.remove('on'));}
+async function envDep(){
+  const texto=document.getElementById('dtx').value.trim();
+  if(!texto){toast('Escreva sua experiência.',true);return;}
+  if(!SV){toast('Selecione uma nota.',true);return;}
+  const p={nome:document.getElementById('dn').value.trim()||'Anônimo',cidade:document.getElementById('dc').value.trim(),tempo:rsel['dt']||'',nota:SV,resultado:document.getElementById('dres').value,texto,dica:document.getElementById('ddk').value.trim(),status:'pendente',likes:0,user_id:U.id};
+  const{error}=await db.from('depoimentos').insert(p);
+  if(error){toast('Erro ao enviar.',true);return;}
+  document.getElementById('cform').style.display='none';document.getElementById('cok').style.display='block';SV=0;
+}
+function checkMod(){const s=document.getElementById('mspw').value;if(s==='admin123'||s==='Metabolico@2025'||s==='metabolico@mod'){modOk=true;document.getElementById('mauth').style.display='none';document.getElementById('mpanel').style.display='block';renderFila();}else toast('Senha incorreta.',true);}
+function exitMod(){modOk=false;document.getElementById('mpanel').style.display='none';document.getElementById('mauth').style.display='block';}
+async function renderFila(){
+  const{data:pend}=await db.from('depoimentos').select('*').eq('status','pendente').order('criado_em',{ascending:true});
+  const badge=document.getElementById('mbdg');if(badge)badge.textContent=pend?.length||0;
+  const{data:todos}=await db.from('depoimentos').select('id,status');
+  const aprov=todos?.filter(d=>d.status==='aprovado').length||0;
+  document.getElementById('mstats').innerHTML=`<div class="mc"><div class="ml">Pendentes</div><div class="mv">${pend?.length||0}</div></div><div class="mc"><div class="ml">Publicados</div><div class="mv">${aprov}</div></div>`;
+  const el=document.getElementById('mfila');
+  if(!pend?.length){el.innerHTML='<div class="empty"><i class="ti ti-circle-check"></i>Nenhum depoimento pendente.</div>';return;}
+  el.innerHTML=pend.map(d=>`<div class="card" id="mc${d.id}"><div style="font-size:13px;font-weight:500;margin-bottom:3px">${d.nome}${d.cidade?' · '+d.cidade:''}</div><div style="font-size:11px;color:var(--m);margin-bottom:.625rem">${'★'.repeat(d.nota||5)} · ${d.tempo||''}</div><div style="font-size:13px;background:var(--bg2);border-radius:var(--rm);padding:.75rem;margin-bottom:.75rem;line-height:1.5">${d.texto}${d.dica?`<div style="margin-top:.5rem;font-size:12px;color:var(--m)"><strong>Dica:</strong> ${d.dica}</div>`:''}</div><div class="moa"><button class="bap" onclick="modDep('${d.id}','aprovado')"><i class="ti ti-check"></i> Aprovar</button><button class="brj" onclick="modDep('${d.id}','rejeitado')"><i class="ti ti-x"></i> Rejeitar</button></div></div>`).join('');
+}
+async function modDep(id,acao){
+  await db.from('depoimentos').update({status:acao}).eq('id',id);
+  const el=document.getElementById('mc'+id);if(el){el.style.opacity='.3';el.style.pointerEvents='none';setTimeout(()=>{el.remove();renderFila();},400);}
+  if(acao==='aprovado'){const{data}=await db.from('depoimentos').select('*').eq('status','aprovado').order('likes',{ascending:false});if(data)DEPS=data;}
+}
+
+// ── IA ──
+const IA_CFG={
+  nutri:{title:'Nutrição para RI',icon:'ti-salad',color:'#639922',role:'nutricionista especialista em resistência insulínica'},
+  exerc:{title:'Exercício para RI',icon:'ti-run',color:'#1D9E75',role:'personal trainer especialista em saúde metabólica e resistência insulínica'},
+  sono:{title:'Protocolo de sono',icon:'ti-moon',color:'#7F77DD',role:'especialista em medicina do sono e resistência insulínica'},
+  suple:{title:'Suplementação',icon:'ti-pill',color:'#BA7517',role:'farmacêutico clínico especialista em suplementação para resistência insulínica'}
+};
+async function openIA(mod){
+  document.getElementById('ia-g').style.display='none';
+  document.getElementById('ia-p').style.display='block';
+  const cfg=IA_CFG[mod];
+  document.getElementById('ia-c').innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem"><div style="width:36px;height:36px;border-radius:10px;background:${cfg.color}25;display:flex;align-items:center;justify-content:center"><i class="ti ${cfg.icon}" style="font-size:18px;color:${cfg.color}"></i></div><span style="font-size:16px;font-weight:500">${cfg.title}</span></div><div style="text-align:center;padding:2rem;color:var(--m)"><i class="ti ti-loader spin" style="font-size:24px;color:var(--t);display:block;margin-bottom:.5rem"></i><div style="font-size:13px">Gerando recomendações personalizadas...</div></div>`;
+  const pc=`Perfil: sexo ${ANA.sexo||'?'}, peso ${ANA.peso||'?'}kg, HOMA-IR ${ANA.homa||'?'}, atividade ${ANA.ativ||'?'}, sono ${ANA.qsono||'?'}, estresse ${ANA.stress||'?'}, objetivo: ${ANA.obj||'controlar RI'}, medicamentos: ${ANA.meds||'nenhum'}, suplementos: ${ANA.sups||'nenhum'}.`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:`Você é ${cfg.role}. ${pc} Gere recomendações práticas e específicas para resistência insulínica em português. Seja direto com exemplos concretos. Máximo 400 palavras. Use títulos com ## e listas com -.`}]})});
+    const data=await resp.json();
+    const txt=data.content?.map(c=>c.text||'').join('')||'Não foi possível gerar recomendações.';
+    const fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^## (.*)/gm,'<h2 style="font-size:16px;font-weight:500;margin:1rem 0 .5rem;color:var(--tx)">$1</h2>').replace(/^### (.*)/gm,'<h3 style="font-size:14px;font-weight:500;margin:.875rem 0 .375rem">$1</h3>').replace(/^- (.*)/gm,'<li style="margin-bottom:.25rem">$1</li>').replace(/(<li[^>]*>.*?<\/li>\n?)+/gs,'<ul style="padding-left:1.25rem;margin-bottom:.625rem">$&</ul>').replace(/\n\n/g,'<br><br>');
+    document.getElementById('ia-c').innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem"><div style="width:36px;height:36px;border-radius:10px;background:${cfg.color}25;display:flex;align-items:center;justify-content:center"><i class="ti ${cfg.icon}" style="font-size:18px;color:${cfg.color}"></i></div><span style="font-size:16px;font-weight:500">${cfg.title}</span></div><div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--rm);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t800)"><i class="ti ti-sparkles" style="font-size:13px;vertical-align:-1px"></i> Gerado com base no seu perfil</div><div style="font-size:14px;line-height:1.65">${fmt}</div>`;
+  }catch(e){
+    document.getElementById('ia-c').innerHTML+=`<div style="font-size:13px;color:var(--m);text-align:center;padding:1rem;margin-top:1rem;background:var(--bg2);border-radius:var(--rm)">Para ativar as recomendações com IA, adicione a chave API do Claude no arquivo do app.</div>`;
+  }
+}
+
+// ── INIT ──
+window.addEventListener('load',async()=>{
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user)initApp(session.user);
+});
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_OUT'){document.getElementById('app').style.display='none';document.getElementById('auth').style.display='flex';}
+});
+</script>
+</body>
+</html>
