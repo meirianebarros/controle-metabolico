@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -638,10 +637,13 @@ function choma(){
 function cimc(){const p=parseFloat(document.getElementById('ape').value),h=parseFloat(document.getElementById('aal').value)||parseFloat(ANA.altura)||0;if(p&&h){const imc=(p/((h/100)**2)).toFixed(1);document.getElementById('aimc').value=imc;ad.imc=parseFloat(imc);}}
 function crcq(){const ca=parseFloat(document.getElementById('aca').value),cq=parseFloat(document.getElementById('acq').value);if(ca&&cq){const r=(ca/cq).toFixed(2);ad.rcq=parseFloat(r);document.getElementById('arcqv').textContent=r;document.getElementById('arcq').style.display='flex';}}
 async function saveAna(){
-  const p={user_id:U.id,nome:document.getElementById('an').value||ANA.nome,nasc:document.getElementById('anas').value,altura:document.getElementById('aal').value||ANA.altura,sexo:ad.asx||ANA.sexo,peso:document.getElementById('ape').value||ANA.peso,ca:document.getElementById('aca').value,cq:document.getElementById('acq').value,imc:ad.imc,rcq:ad.rcq,diab:ad.adb,prediab:ad.apd,hiper:ad.ahp,sindmet:ad.asm,sop:ad.asp,esteat:ad.aeh,famdiab:ad.afd,glic:document.getElementById('agl').value,insu:document.getElementById('ains').value,homa:ad.homa,hba1c:document.getElementById('ahb').value,tg:document.getElementById('atg').value,hdl:document.getElementById('ahdl').value,tsh:document.getElementById('atsh').value,refeicoes:ad.aref,ultra:ad.ault,bebac:ad.aba,jejum:ad.ajj,ativ:ad.aat,hsono:document.getElementById('ahs').value,qsono:document.getElementById('aqs').value,stress:ad.ast,sentado:ad.asen,cansaco:ad.acn,fome:ad.afm,craving:ad.acr,dificpeso:ad.adp,acantose:ad.aac,meds:document.getElementById('amed').value,sups:document.getElementById('asup').value,obj:ad.aobj};
-  const{error}=await db.from('anamneses').upsert(p,{onConflict:'user_id'});
-  if(error){toast('Erro ao salvar.',true);return;}
-  ANA=p;toast('Perfil salvo!');renderAna();renderHome();
+  const p={nome:document.getElementById('an').value||ANA.nome,nasc:document.getElementById('anas').value,altura:document.getElementById('aal').value||ANA.altura,sexo:ad.asx||ANA.sexo,peso:document.getElementById('ape').value||ANA.peso,ca:document.getElementById('aca').value,cq:document.getElementById('acq').value,imc:ad.imc,rcq:ad.rcq,diab:ad.adb,prediab:ad.apd,hiper:ad.ahp,sindmet:ad.asm,sop:ad.asp,esteat:ad.aeh,famdiab:ad.afd,glic:document.getElementById('agl').value,insu:document.getElementById('ains').value,homa:ad.homa,hba1c:document.getElementById('ahb').value,tg:document.getElementById('atg').value,hdl:document.getElementById('ahdl').value,tsh:document.getElementById('atsh').value,refeicoes:ad.aref,ultra:ad.ault,bebac:ad.aba,jejum:ad.ajj,ativ:ad.aat,hsono:document.getElementById('ahs').value,qsono:document.getElementById('aqs').value,stress:ad.ast,sentado:ad.asen,cansaco:ad.acn,fome:ad.afm,craving:ad.acr,dificpeso:ad.adp,acantose:ad.aac,meds:document.getElementById('amed').value,sups:document.getElementById('asup').value,obj:ad.aobj};
+  const{data:ex}=await db.from('anamneses').select('id').eq('user_id',U.id).maybeSingle();
+  let error;
+  if(ex){const r=await db.from('anamneses').update(p).eq('user_id',U.id);error=r.error;}
+  else{const r=await db.from('anamneses').insert({...p,user_id:U.id});error=r.error;}
+  if(error){toast('Erro ao salvar.',true);console.error(error);return;}
+  ANA={...p,user_id:U.id};toast('Perfil salvo!');renderAna();renderHome();
 }
 
 // ── REGISTRO ──
@@ -663,7 +665,7 @@ function rtab(t,btn){
 }
 async function saveReg(){
   const p={user_id:U.id,data:new Date().toISOString().split('T')[0],peso:parseFloat(document.getElementById('rpe').value)||null,ca:parseFloat(document.getElementById('rca').value)||null,glic:parseFloat(document.getElementById('rgl').value)||null,glic_pos:parseFloat(document.getElementById('rgp').value)||null,energia:parseInt(document.getElementById('ren').value),sono:parseInt(document.getElementById('rsn').value),craving:parseInt(document.getElementById('rcv').value),stress:parseInt(document.getElementById('rst').value),exercicio:rsel['rex']||null,dieta:rsel['rdt']||null};
-  const{error}=await db.from('registros').upsert(p,{onConflict:'user_id,data'});
+  const{error}=await db.from('registros').upsert(p,{onConflict:'user_id,data',ignoreDuplicates:false});
   if(error){toast('Erro ao salvar.',true);return;}
   const idx=REGS.findIndex(r=>r.data===p.data);
   if(idx>=0)REGS[idx]=p;else REGS.push(p);
