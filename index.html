@@ -514,6 +514,23 @@ button{font-family:inherit}
   <div class="pg-head"><button class="bk" onclick="go('p-home')"><i class="ti ti-arrow-left"></i></button><span class="pg-tit">Meus exames</span></div>
   <div class="tab-row"><button class="tab on" onclick="examTab('registrar',this)">Registrar</button><button class="tab" onclick="examTab('historico',this)">Hist&#243;rico</button></div>
   <div id="exam-reg">
+    <!-- Upload de exame -->
+    <div class="card" style="margin-bottom:.75rem">
+      <div class="sh"><div class="si t"><i class="ti ti-file-upload"></i></div><div class="st">Enviar exame de sangue</div></div>
+      <div style="font-size:12px;color:var(--m);margin-bottom:.875rem;line-height:1.5">Faça upload do PDF ou foto do seu exame. A IA extrai os valores automaticamente.</div>
+      <div id="exam-upload-area" onclick="document.getElementById('exam-file').click()" style="border:1.5px dashed var(--bd2);border-radius:var(--r);padding:1.5rem;text-align:center;cursor:pointer;background:var(--bg2);transition:all .15s">
+        <i class="ti ti-file-type-pdf" style="font-size:32px;color:var(--m);display:block;margin-bottom:.5rem"></i>
+        <div style="font-size:13px;color:var(--m);margin-bottom:4px">Clique para selecionar</div>
+        <div style="font-size:11px;color:var(--bd2)">PDF, JPG ou PNG do exame</div>
+      </div>
+      <input type="file" id="exam-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="processarExame(this)">
+      <div id="exam-upload-status" style="display:none;margin-top:.75rem"></div>
+    </div>
+    <div id="exam-divider" style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+      <div style="flex:1;height:.5px;background:var(--bd)"></div>
+      <span style="font-size:11px;color:var(--m)">ou preencha manualmente</span>
+      <div style="flex:1;height:.5px;background:var(--bd)"></div>
+    </div>
     <div style="font-size:13px;color:var(--m);margin-bottom:1rem;line-height:1.5">Registre seus exames para acompanhar a evolu&#231;&#227;o metab&#243;lica.</div>
     <div class="card"><div class="sh"><div class="si t"><i class="ti ti-test-pipe"></i></div><div class="st">Marcadores metab&#243;licos</div></div>
       <div class="g2"><div class="fl"><label>Glicemia jejum (mg/dL)</label><input type="number" id="ex-glic" placeholder="100"></div><div class="fl"><label>Insulina jejum (&#181;U/mL)</label><input type="number" id="ex-ins" placeholder="10"></div></div>
@@ -1099,6 +1116,127 @@ async function gerarTreinoHoje(){
 
 // EXAMES
 const EXAMES_REF={glic:{nome:'Glicemia jejum',unidade:'mg/dL',ref:'< 100',ok:v=>v<100,at:v=>v>=100&&v<126},insu:{nome:'Insulina jejum',unidade:'\u00b5U/mL',ref:'< 10',ok:v=>v<10,at:v=>v>=10&&v<25},homa:{nome:'HOMA-IR',unidade:'',ref:'< 2.0',ok:v=>v<2,at:v=>v>=2&&v<2.5},hba1c:{nome:'HbA1c',unidade:'%',ref:'< 5.7%',ok:v=>v<5.7,at:v=>v>=5.7&&v<6.5},tg:{nome:'Triglicer\u00eddeos',unidade:'mg/dL',ref:'< 150',ok:v=>v<150,at:v=>v>=150&&v<200},hdl:{nome:'HDL',unidade:'mg/dL',ref:'> 50 (F) / > 40 (M)',ok:v=>v>50,at:v=>v>=40&&v<=50},vitd:{nome:'Vitamina D',unidade:'ng/mL',ref:'> 30',ok:v=>v>30,at:v=>v>=20&&v<=30}};
+
+
+async function processarExame(input){
+  var file = input.files[0];
+  if(!file) return;
+
+  var status = document.getElementById('exam-upload-status');
+  var area = document.getElementById('exam-upload-area');
+
+  // Show loading
+  status.style.display = 'block';
+  status.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:.625rem .875rem;background:var(--t50);border-radius:var(--rm);font-size:13px;color:var(--t800)"><i class="ti ti-loader spin"></i> Lendo exame com IA...</div>';
+  area.style.opacity = '0.5';
+  area.style.pointerEvents = 'none';
+
+  try {
+    // Read file as base64
+    var b64 = await new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(e){ resolve(e.target.result.split(',')[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    var isPdf = file.type === 'application/pdf';
+    var mediaType = isPdf ? 'application/pdf' : file.type || 'image/jpeg';
+
+    // Build message for Claude
+    var messages;
+    if(isPdf){
+      messages = [{
+        role: 'user',
+        content: [
+          {type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: b64}},
+          {type: 'text', text: 'Este e um exame de sangue brasileiro. Extraia APENAS os seguintes valores se presentes: glicemia jejum (mg/dL), insulina jejum (uU/mL), hemoglobina glicada HbA1c (%), triglicerideos (mg/dL), HDL (mg/dL), LDL (mg/dL), vitamina D (ng/mL), ferritina (ng/mL), TSH (mUI/L). Responda SOMENTE com JSON no formato: {"glic":null,"insu":null,"hba1c":null,"tg":null,"hdl":null,"ldl":null,"vitd":null,"ferr":null,"tsh":null}. Use null para valores nao encontrados. Apenas numeros, sem unidades.'}
+        ]
+      }];
+    } else {
+      messages = [{
+        role: 'user',
+        content: [
+          {type: 'image', source: {type: 'base64', media_type: mediaType, data: b64}},
+          {type: 'text', text: 'Este e um exame de sangue brasileiro. Extraia APENAS os seguintes valores se presentes: glicemia jejum (mg/dL), insulina jejum (uU/mL), hemoglobina glicada HbA1c (%), triglicerideos (mg/dL), HDL (mg/dL), LDL (mg/dL), vitamina D (ng/mL), ferritina (ng/mL), TSH (mUI/L). Responda SOMENTE com JSON no formato: {"glic":null,"insu":null,"hba1c":null,"tg":null,"hdl":null,"ldl":null,"vitd":null,"ferr":null,"tsh":null}. Use null para valores nao encontrados. Apenas numeros, sem unidades.'}
+        ]
+      }];
+    }
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CK,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 300,
+        messages: messages
+      })
+    });
+
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    if(data.error) throw new Error(data.error.message || 'Erro da API');
+
+    var txt = '';
+    if(data.content) for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
+
+    // Parse JSON response
+    var jsonMatch = txt.match(/\{[^}]+\}/);
+    if(!jsonMatch) throw new Error('Nao foi possivel extrair os dados');
+    var valores = JSON.parse(jsonMatch[0]);
+
+    // Fill form fields
+    var campos = {
+      'ex-glic': valores.glic,
+      'ex-ins': valores.insu,
+      'ex-hba': valores.hba1c,
+      'ex-tg': valores.tg,
+      'ex-hdl': valores.hdl,
+      'ex-ldl': valores.ldl,
+      'ex-vitd': valores.vitd,
+      'ex-ferr': valores.ferr,
+      'ex-tsh': valores.tsh
+    };
+
+    var preenchidos = 0;
+    Object.keys(campos).forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && campos[id] !== null && campos[id] !== undefined){
+        el.value = campos[id];
+        el.style.background = 'var(--g50)';
+        el.style.borderColor = 'var(--g100)';
+        preenchidos++;
+      }
+    });
+
+    // Calc HOMA-IR
+    calcHomaExame();
+
+    // Show result
+    status.innerHTML = '<div style="background:var(--g50);border:.5px solid var(--g100);border-radius:var(--rm);padding:.625rem .875rem;font-size:13px;color:var(--g800);display:flex;align-items:center;gap:8px"><i class="ti ti-check"></i> ' + preenchidos + ' valores extraidos automaticamente! Verifique e salve.</div>';
+    area.innerHTML = '<div style="font-size:13px;color:var(--t800);display:flex;align-items:center;gap:8px"><i class="ti ti-file-check" style="font-size:20px;color:var(--t)"></i>' + file.name + '</div>';
+    area.style.background = 'var(--t50)';
+    area.style.borderColor = 'var(--t100)';
+    area.style.opacity = '1';
+    area.style.pointerEvents = 'auto';
+
+    // Scroll to fields
+    document.getElementById('ex-glic').scrollIntoView({behavior:'smooth', block:'center'});
+
+  } catch(err) {
+    console.error('Exame upload error:', err);
+    status.innerHTML = '<div style="background:var(--r50);border:.5px solid var(--r100);border-radius:var(--rm);padding:.625rem .875rem;font-size:13px;color:var(--r800);display:flex;align-items:center;gap:8px"><i class="ti ti-alert-circle"></i> Erro ao ler exame: ' + err.message + '. Preencha manualmente.</div>';
+    area.style.opacity = '1';
+    area.style.pointerEvents = 'auto';
+  }
+
+  input.value = '';
+}
 
 function renderExames(){
   var df=document.getElementById('ex-data');
