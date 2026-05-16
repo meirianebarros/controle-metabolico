@@ -1004,8 +1004,7 @@ async function salvarDiario(){
         +'<div style="width:28px;height:28px;border-radius:8px;background:var(--t);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
         +'<i class="ti ti-brain" style="font-size:14px;color:#fff"></i></div>'
         +'<span style="font-size:13px;font-weight:500;color:var(--t800)">Analise do seu cardapio de hoje</span></div>'
-        +'<div style="font-size:13px;color:var(--tx);line-height:1.65">'+txt.replace(/
-/g,'<br>')+'</div></div>';
+        +'<div style="font-size:13px;color:var(--tx);line-height:1.65">'+txt.replace(/\n/g,'<br>')+'</div></div>';
     }
   }catch(err){
     console.error('analise diario error:',err);
