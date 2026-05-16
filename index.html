@@ -1012,15 +1012,119 @@ async function salvarDiario(){
     toast('Refeicoes salvas!');
   }
 }
-function renderPadroes(){
-  const padroes=[];
-  const semanaRegs=REGS.slice(-7);
-  if(semanaRegs.filter(r=>r.craving>7).length>=3)padroes.push({icone:'ti-cookie',cor:'var(--a50)',ct:'var(--a800)',txt:'Voc\u00ea marcou craving alto 3+ vezes esta semana. Isso pode estar relacionado \u00e0 composi\u00e7\u00e3o das refei\u00e7\u00f5es, sono ruim ou intervalos muito longos sem prote\u00edna.'});
-  if(semanaRegs.filter(r=>r.stress>7).length>=3)padroes.push({icone:'ti-brain',cor:'var(--r50)',ct:'var(--r800)',txt:'Estresse elevado em v\u00e1rios dias. Cortisol alto instrui o f\u00edgado a produzir glicose 24h por dia.'});
-  if(semanaRegs.filter(r=>r.energia<5).length>=3)padroes.push({icone:'ti-battery-1',cor:'var(--a50)',ct:'var(--a800)',txt:'Energia baixa em v\u00e1rios dias. Verifique se est\u00e1 comendo prote\u00edna suficiente e dormindo bem.'});
-  const el=document.getElementById('diario-padroes-content');
-  if(!padroes.length){el.innerHTML='<div class="empty"><i class="ti ti-chart-bar"></i>Registre mais dias para identificar padr\u00f5es.</div>';return;}
-  el.innerHTML=padroes.map(p=>`<div style="background:${p.cor};border-radius:var(--r);padding:.875rem 1rem;margin-bottom:.75rem;display:flex;gap:10px"><i class="ti ${p.icone}" style="font-size:20px;color:${p.ct};flex-shrink:0;margin-top:2px"></i><div style="font-size:13px;color:${p.ct};line-height:1.6">${p.txt}</div></div>`).join('');
+async function renderPadroes(){
+  var el=document.getElementById('diario-padroes-content');
+  if(!el)return;
+
+  el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:.875rem;font-size:13px;color:var(--m)">'
+    +'<i class="ti ti-loader spin" style="color:var(--t)"></i> Analisando seus padroes...</div>';
+
+  // Load checkins and refeicoes from last 7 days
+  var checkinData=[];
+  var refeicaoData=[];
+  try{
+    var r1=await db.from('diario_checkins').select('*').eq('user_id',U.id).order('data',{ascending:false}).limit(14);
+    if(r1.data)checkinData=r1.data;
+    var r2=await db.from('diario_refeicoes').select('*').eq('user_id',U.id).order('data',{ascending:false}).limit(14);
+    if(r2.data)refeicaoData=r2.data;
+  }catch(e){console.error('padroes load error:',e);}
+
+  var semanaRegs=REGS.slice(-7);
+  var padroes=[];
+
+  // --- Analyze REGS data ---
+  if(semanaRegs.filter(function(r){return r.craving>7;}).length>=2)
+    padroes.push({icone:'ti-cookie',cor:'a',txt:'Craving alto em varios dias. Inclua proteina em todas as refeicoes e evite ficar mais de 4h sem comer.'});
+  if(semanaRegs.filter(function(r){return r.stress>7;}).length>=2)
+    padroes.push({icone:'ti-brain',cor:'r',txt:'Estresse elevado frequente. Cortisol alto faz o figado produzir glicose mesmo em jejum. Tente 5 min de respiracao profunda apos o almoco.'});
+  if(semanaRegs.filter(function(r){return r.energia<4;}).length>=2)
+    padroes.push({icone:'ti-battery-1',cor:'a',txt:'Energia baixa em varios dias. Verifique se esta comendo proteina no cafe da manha e dormindo 7-8h.'});
+  if(semanaRegs.filter(function(r){return r.sono<5;}).length>=2)
+    padroes.push({icone:'ti-moon',cor:'b',txt:'Sono ruim frequente. Privacao de sono aumenta o HOMA-IR em ate 30%. Tente dormir antes das 23h e evite telas 1h antes.'});
+
+  // --- Analyze CHECKINS ---
+  var checkCounts={};
+  checkinData.forEach(function(d){
+    Object.keys(d.checkins||{}).forEach(function(k){
+      if(d.checkins[k])checkCounts[k]=(checkCounts[k]||0)+1;
+    });
+  });
+
+  var totalDiasCheckin=checkinData.length;
+  if(totalDiasCheckin>0){
+    if((checkCounts['telas_noite']||0)>=2)
+      padroes.push({icone:'ti-device-mobile',cor:'a',txt:'Telas a noite em varios dias. Luz azul reduz melatonina e piora a sensibilidade a insulina durante o sono.'});
+    if((checkCounts['jantar_tarde']||0)>=2)
+      padroes.push({icone:'ti-clock',cor:'r',txt:'Jantar tarde frequente. Comer apos as 20h eleva a glicemia noturna. Tente antecipar o jantar para antes das 19h30.'});
+    if((checkCounts['doce']||0)>=2)
+      padroes.push({icone:'ti-candy',cor:'r',txt:'Consumo de doces frequente. Substitua por frutas vermelhas com castanhas — satisfazem o craving sem pico de insulina.'});
+    if((checkCounts['exercicio']||0)>=3)
+      padroes.push({icone:'ti-run',cor:'t',txt:'Otimo! Exercicio em '+checkCounts['exercicio']+' dias. Cada sessao melhora a sensibilidade a insulina por 24-48h. Continue!'});
+    if((checkCounts['proteina_cafe']||0)>=3)
+      padroes.push({icone:'ti-egg',cor:'t',txt:'Proteina no cafe em '+checkCounts['proteina_cafe']+' dias. Excelente habito! Reduz craving e estabiliza a glicemia ate o almoco.'});
+    if((checkCounts['agua']||0)>=3)
+      padroes.push({icone:'ti-droplet',cor:'t',txt:'Boa hidratacao em varios dias. Agua adequada melhora a funcao insulinica e reduz falsa fome.'});
+  }
+
+  // --- Analyze REFEICOES with AI if we have enough data ---
+  if(refeicaoData.length>=2){
+    // Build summary for AI
+    var resumo=refeicaoData.slice(0,5).map(function(d){
+      var ref=[];
+      if(d.cafe)ref.push('Cafe:'+d.cafe);
+      if(d.almoco)ref.push('Almoco:'+d.almoco);
+      if(d.jantar)ref.push('Jantar:'+d.jantar);
+      if(d.lanche)ref.push('Lanche:'+d.lanche);
+      return d.data+' ['+ref.join(' | ')+']';
+    }).join(' / ');
+
+    var perfil='';
+    if(ANA&&ANA.nome)perfil='Paciente: '+ANA.nome+'. ';
+    if(ANA&&ANA.homa)perfil+='HOMA-IR: '+ANA.homa+'. ';
+    if(ANA&&ANA.obj)perfil+='Objetivo: '+ANA.obj+'. ';
+
+    var prompt='Voce e nutricionista especialista em RI. '+perfil
+      +'Analise o historico alimentar dos ultimos dias e identifique 2 PADROES que podem estar prejudicando o controle da resistencia insulinica. '
+      +'Historico: '+resumo+'. '
+      +'Formato: para cada padrao, escreva uma linha direta com o problema e uma sugestao pratica. '
+      +'Maximo 4 linhas no total. Sem asteriscos. Em portugues simples.';
+
+    try{
+      var resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':CK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:250,messages:[{role:'user',content:prompt}]})
+      });
+      if(resp.ok){
+        var data=await resp.json();
+        var txt='';
+        if(data.content)for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
+        if(txt){
+          padroes.push({icone:'ti-sparkles',cor:'t',txt:txt.replace(/\n/g,' | ')});
+        }
+      }
+    }catch(e){console.error('ai padroes error:',e);}
+  }
+
+  // Render
+  if(!padroes.length){
+    el.innerHTML='<div class="empty"><i class="ti ti-chart-bar"></i>Registre mais dias para identificar padroes. Use os check-ins diarios!</div>';
+    return;
+  }
+
+  var colors={
+    t:{bg:'var(--t50)',ct:'var(--t800)',bd:'var(--t100)'},
+    a:{bg:'var(--a50)',ct:'var(--a800)',bd:'var(--a100)'},
+    r:{bg:'var(--r50)',ct:'var(--r800)',bd:'var(--r100)'},
+    b:{bg:'var(--b50)',ct:'var(--b800)',bd:'var(--b100)'}
+  };
+
+  el.innerHTML=padroes.map(function(p){
+    var c=colors[p.cor]||colors.t;
+    return '<div style="background:'+c.bg+';border:.5px solid '+c.bd+';border-radius:var(--r);padding:.875rem 1rem;margin-bottom:.75rem;display:flex;gap:10px">'
+      +'<i class="ti '+p.icone+'" style="font-size:18px;color:'+c.ct+';flex-shrink:0;margin-top:2px"></i>'
+      +'<div style="font-size:13px;color:'+c.ct+';line-height:1.6">'+p.txt+'</div></div>';
+  }).join('');
 }
 
 // RECEITAS
