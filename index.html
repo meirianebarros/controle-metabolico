@@ -866,60 +866,68 @@ function cimc(){const p=parseFloat(document.getElementById('ape').value),h=parse
 function crcq(){const ca=parseFloat(document.getElementById('aca').value),cq=parseFloat(document.getElementById('acq').value);if(ca&&cq){const r=(ca/cq).toFixed(2);ad.rcq=parseFloat(r);document.getElementById('arcqv').textContent=r;document.getElementById('arcq').style.display='flex';}}
 async function saveAna(){
   var n=function(v){return(v===''||v===undefined||v===null)?null:v;};
-  var getV=function(id){var el=document.getElementById(id);return el?el.value:null;};
-  var getN=function(id){var el=document.getElementById(id);return el?parseFloat(el.value)||null:null;};
+  var getV=function(id){var el=document.getElementById(id);return el?el.value||null:null;};
+  var getN=function(id){var el=document.getElementById(id);return el?(parseFloat(el.value)||null):null;};
 
   var p={
     nome:getV('an')||ANA.nome,
     nasc:n(getV('anas')),
-    altura:n(getN('aal')||parseFloat(ANA.altura)),
-    sexo:ad.asx||ANA.sexo,
-    peso:n(getN('ape')||parseFloat(ANA.peso)),
+    altura:n(getN('aal')||parseFloat(ANA.altura)||null),
+    sexo:ad.asx||ANA.sexo||null,
+    peso:n(getN('ape')||parseFloat(ANA.peso)||null),
     ca:n(getN('aca')),
     cq:n(getN('acq')),
-    imc:n(ad.imc),
-    rcq:n(ad.rcq),
-    diab:n(ad.adb),
-    prediab:n(ad.apd),
-    hiper:n(ad.ahp),
-    sindmet:n(ad.asm),
-    sop:n(ad.asp),
-    esteat:n(ad.aeh),
-    famdiab:n(ad.afd),
-    refeicoes:n(ad.aref),
-    intol:n(ad.aint),
-    gut:n(ad.agut),
-    jeju:n(ad.ajeju),
-    ativ:n(ad.aat),
-    treinos:n(ad.atrei),
-    stress:n(ad.astress),
-    qsono:n(ad.asono),
-    tabagismo:n(ad.atab),
-    alcool:n(ad.aalc),
-    cansaco:n(ad.acn),
-    fome:n(ad.afm),
-    vontade_doce:n(ad.acr),
-    dificpeso:n(ad.adp),
-    acantose:n(ad.aac),
-    meds:n(getV('amed')),
-    sups:n(getV('asup')),
-    obj:n(ad.aobj)
+    imc:n(ad.imc||null),
+    rcq:n(ad.rcq||null),
+    diab:n(ad.adb!=null?ad.adb:ANA.diab),
+    prediab:n(ad.apd!=null?ad.apd:ANA.prediab),
+    hiper:n(ad.ahp!=null?ad.ahp:ANA.hiper),
+    sindmet:n(ad.asm!=null?ad.asm:ANA.sindmet),
+    sop:n(ad.asp!=null?ad.asp:ANA.sop),
+    esteat:n(ad.aeh!=null?ad.aeh:ANA.esteat),
+    famdiab:n(ad.afd!=null?ad.afd:ANA.famdiab),
+    refeicoes:n(ad.aref||ANA.refeicoes),
+    bebac:n(ad.aalc!=null?ad.aalc:ANA.bebac),
+    jejum:n(ad.ajeju!=null?ad.ajeju:ANA.jejum),
+    ativ:n(ad.aat||ANA.ativ),
+    qsono:n(ad.asono||ANA.qsono),
+    stress:n(ad.astress||ANA.stress),
+    sentado:n(ad.atab!=null?ad.atab:ANA.sentado),
+    cansaco:n(ad.acn!=null?ad.acn:ANA.cansaco),
+    fome:n(ad.afm!=null?ad.afm:ANA.fome),
+    craving:n(ad.acr!=null?ad.acr:ANA.craving),
+    dificpeso:n(ad.adp!=null?ad.adp:ANA.dificpeso),
+    acantose:n(ad.aac!=null?ad.aac:ANA.acantose),
+    meds:n(getV('amed')||ANA.meds),
+    sups:n(getV('asup')||ANA.sups),
+    obj:n(ad.aobj||ANA.obj),
+    atualizado_em:new Date().toISOString()
   };
 
-  var ex=await db.from('anamneses').select('id').eq('user_id',U.id).maybeSingle();
-  var error;
-  if(ex&&ex.data){
-    var r=await db.from('anamneses').update(p).eq('user_id',U.id);
-    error=r.error;
-  }else{
-    var r2=await db.from('anamneses').insert(Object.assign({},p,{user_id:U.id}));
-    error=r2.error;
+  try{
+    var ex=await db.from('anamneses').select('id').eq('user_id',U.id).maybeSingle();
+    var error;
+    if(ex&&ex.data){
+      var r=await db.from('anamneses').update(p).eq('user_id',U.id);
+      error=r.error;
+    }else{
+      p.user_id=U.id;
+      var r2=await db.from('anamneses').insert(p);
+      error=r2.error;
+    }
+    if(error){
+      console.error('saveAna error:',JSON.stringify(error));
+      toast('Erro ao salvar: '+error.message,true);
+      return;
+    }
+    ANA=Object.assign({},ANA,p,{user_id:U.id});
+    toast('Perfil salvo!');
+    renderAna();
+    renderHome();
+  }catch(err){
+    console.error('saveAna exception:',err);
+    toast('Erro ao salvar.',true);
   }
-  if(error){toast('Erro ao salvar.',true);console.error('saveAna error:',error);return;}
-  ANA=Object.assign({},p,{user_id:U.id});
-  toast('Perfil salvo!');
-  renderAna();
-  renderHome();
 }
 
 // REGISTRO DIARIO
