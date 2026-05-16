@@ -1381,28 +1381,71 @@ const DESAFIO_DIAS=[
 let desafioProgress={};
 
 async function renderDesafios(){
-  try{const{data}=await db.from('desafio_progress').select('*').eq('user_id',U.id).single();if(data)desafioProgress=data.progress||{};}catch(e){}
-  const hoje=new Date().toISOString().split('T')[0];
-  const diasFeitos=Object.keys(desafioProgress).length;
-  const el=document.getElementById('desafio-content');
-  el.innerHTML=`
-    <div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
-        <span style="font-size:13px;font-weight:500;color:var(--t800)">Progresso</span>
-        <span style="font-size:13px;font-weight:500;color:var(--t800)">${diasFeitos}/21 dias</span>
-      </div>
-      <div class="pb"><div class="pf" style="width:${Math.round(diasFeitos/21*100)}%"></div></div>
-    </div>
-    ${DESAFIO_DIAS.map(d=>{
-      const feito=desafioProgress[d.d];
-      const cls=feito?'day-done':d.d===diasFeitos+1?'day-cur':'day-lock';
-      const bloq=d.d>diasFeitos+1;
-      return`<div class="desafio-day" style="${bloq?'opacity:.4;pointer-events:none':'cursor:pointer'}" onclick="${bloq?'':` completarDesafio(${d.d})`}">
-        <div class="day-num ${cls}">${feito?'\u2713':d.d}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:2px">${d.t}</div><div style="font-size:12px;color:var(--m);line-height:1.4">${d.desc}</div></div>
-        ${feito?`<i class="ti ti-circle-check" style="color:var(--t);font-size:20px;flex-shrink:0"></i>`:''}
-      </div>`;
-    }).join('')}`;
+  try{
+    var r=await db.from('desafio_progress').select('*').eq('user_id',U.id).single();
+    if(r.data){
+      desafioProgress=r.data.progress||{};
+      desafioInicio=r.data.inicio||null;
+    }
+  }catch(e){}
+
+  var hoje=new Date().toISOString().split('T')[0];
+  var el=document.getElementById('desafio-content');
+  if(!el)return;
+
+  // Calculate current day
+  var diaAtual=0;
+  if(desafioInicio){
+    var ms=new Date(hoje)-new Date(desafioInicio);
+    diaAtual=Math.floor(ms/(1000*60*60*24))+1;
+  }
+
+  var html='';
+
+  if(!desafioInicio){
+    // Not started - show start button
+    html='<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:1.5rem;text-align:center;margin-bottom:1rem">'
+      +'<div style="font-size:36px;margin-bottom:.75rem">&#x1F3AF;</div>'
+      +'<div style="font-size:16px;font-weight:500;color:var(--t800);margin-bottom:.5rem">Desafio 21 dias</div>'
+      +'<div style="font-size:13px;color:var(--m);margin-bottom:1.25rem;line-height:1.5">Um novo habito por dia para controlar a resistencia insulinica.</div>'
+      +'<button class="btn-p" onclick="iniciarDesafio()" style="max-width:200px;margin:0 auto"><i class="ti ti-player-play"></i> Comecar agora</button>'
+      +'</div>';
+  } else {
+    // Show progress bar
+    var diasFeitos=Object.keys(desafioProgress).length;
+    var pct=Math.round(Math.min(diaAtual-1,21)/21*100);
+    var dataInicioFmt=new Date(desafioInicio+'T12:00:00').toLocaleDateString('pt-BR');
+    html='<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:1rem">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">'
+      +'<span style="font-size:13px;font-weight:500;color:var(--t800)">Progresso</span>'
+      +'<span style="font-size:13px;font-weight:500;color:var(--t800)">'+Math.min(diaAtual-1,21)+'/21 dias</span></div>'
+      +'<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'
+      +'<div style="font-size:11px;color:var(--m);margin-top:4px">Dia '+diaAtual+' de 21 &middot; Iniciado em '+dataInicioFmt+'</div>'
+      +'</div>';
+  }
+
+  // Render each day
+  for(var di=0;di<DESAFIO_DIAS.length;di++){
+    var d=DESAFIO_DIAS[di];
+    var feito=desafioProgress[d.d];
+    var desbloq=desafioInicio&&d.d<=diaAtual;
+    var ehHoje=desafioInicio&&d.d===diaAtual&&!feito;
+    var cls=feito?'day-done':ehHoje?'day-cur':'day-lock';
+    var opacity=desbloq?'1':'0.35';
+    var cursor=desbloq&&!feito?'cursor:pointer':'';
+    var onclick=desbloq&&!feito?' onclick="completarDesafio('+d.d+')"':'';
+    var badge=ehHoje?'<span style="font-size:10px;background:var(--t);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px">hoje</span>':'';
+    var icon=feito?'<i class="ti ti-circle-check" style="color:var(--t);font-size:20px;flex-shrink:0"></i>'
+      :ehHoje?'<i class="ti ti-chevron-right" style="color:var(--t);font-size:18px;flex-shrink:0"></i>':'';
+    html+='<div class="desafio-day" style="opacity:'+opacity+';'+cursor+'"'+onclick+'>'
+      +'<div class="day-num '+cls+'">'+( feito?'&#x2713;':d.d)+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:13px;font-weight:500;margin-bottom:2px">'+d.t+badge+'</div>'
+      +'<div style="font-size:12px;color:var(--m);line-height:1.4">'+d.desc+'</div>'
+      +'</div>'+icon+'</div>';
+  }
+
+  el.innerHTML=html;
 }
 async function completarDesafio(dia){
   desafioProgress[dia]=new Date().toISOString();
