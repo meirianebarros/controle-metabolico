@@ -348,7 +348,7 @@ button{font-family:inherit}
         <div class="fl"><label>Bebidas a&#231;ucaradas?</label><div class="yn" id="aba"><button class="yb" onclick="ay('aba',this,true)">Sim</button><button class="yb" onclick="ay('aba',this,false)">N&#227;o</button></div></div>
         <div class="fl" style="margin-bottom:0"><label>Jejum intermitente?</label><div class="yn" id="ajj"><button class="yb" onclick="ay('ajj',this,true)">Sim</button><button class="yb" onclick="ay('ajj',this,false)">N&#227;o</button></div></div>
       </div>
-      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(4)">&#8592; Voltar</button><button class="btn-p" onclick="ag(6)">Continuar &#8594;</button></div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(3)">&#8592; Voltar</button><button class="btn-p" onclick="ag(5)">Continuar &#8594;</button></div>
     </div>
     <div id="ab6" style="display:none">
       <div class="card"><div class="sh"><div class="si t"><i class="ti ti-run"></i></div><div class="st">Estilo de vida</div></div>
@@ -357,7 +357,7 @@ button{font-family:inherit}
         <div class="fl"><label>N&#237;vel de estresse</label><div class="opts" id="ast"><button class="opt" onclick="ao('ast',this,'baixo')">Baixo</button><button class="opt" onclick="ao('ast',this,'medio')">M&#233;dio</button><button class="opt" onclick="ao('ast',this,'alto')">Alto</button><button class="opt" onclick="ao('ast',this,'muito alto')">Muito alto</button></div></div>
         <div class="fl" style="margin-bottom:0"><label>Trabalho sentado?</label><div class="yn" id="asen"><button class="yb" onclick="ay('asen',this,true)">Sim</button><button class="yb" onclick="ay('asen',this,false)">N&#227;o</button></div></div>
       </div>
-      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(5)">&#8592; Voltar</button><button class="btn-p" onclick="ag(7)">Continuar &#8594;</button></div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(4)">&#8592; Voltar</button><button class="btn-p" onclick="ag(6)">Continuar &#8594;</button></div>
     </div>
     <div id="ab7" style="display:none">
       <div class="card"><div class="sh"><div class="si a"><i class="ti ti-heart-rate"></i></div><div class="st">Sintomas</div></div>
@@ -367,14 +367,14 @@ button{font-family:inherit}
         <div class="fl"><label>Dificuldade de perder peso?</label><div class="yn" id="adp"><button class="yb" onclick="ay('adp',this,true)">Sim</button><button class="yb" onclick="ay('adp',this,false)">N&#227;o</button></div></div>
         <div class="fl" style="margin-bottom:0"><label>Acantose?</label><div class="yn" id="aac"><button class="yb" onclick="ay('aac',this,true)">Sim</button><button class="yb" onclick="ay('aac',this,false)">N&#227;o</button></div></div>
       </div>
-      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(6)">&#8592; Voltar</button><button class="btn-p" onclick="ag(8)">Continuar &#8594;</button></div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(5)">&#8592; Voltar</button><button class="btn-p" onclick="ag(7)">Continuar &#8594;</button></div>
     </div>
     <div id="ab8" style="display:none">
       <div class="card"><div class="sh"><div class="si b"><i class="ti ti-pill"></i></div><div class="st">Medicamentos e suplementos</div></div>
         <div class="fl"><label>Medicamentos em uso</label><textarea id="amed" placeholder="Ex: metformina 500mg..."></textarea></div>
         <div class="fl" style="margin-bottom:0"><label>Suplementos em uso</label><textarea id="asup" placeholder="Ex: &#244;mega-3, vitamina D..."></textarea></div>
       </div>
-      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(7)">&#8592; Voltar</button><button class="btn-p" onclick="ag(9)">Continuar &#8594;</button></div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(6)">&#8592; Voltar</button><button class="btn-p" onclick="ag(8)">Continuar &#8594;</button></div>
     </div>
     <div id="ab9" style="display:none">
       <div class="card"><div class="sh"><div class="si t"><i class="ti ti-target"></i></div><div class="st">Objetivo principal</div></div>
@@ -386,7 +386,7 @@ button{font-family:inherit}
           <button class="opt" onclick="ao('aobj',this,'prevenir diabetes')">Prevenir diabetes</button>
         </div></div>
       </div>
-      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(8)">&#8592; Voltar</button><button class="btn-p" onclick="saveAna()"><i class="ti ti-check"></i> Salvar perfil</button></div>
+      <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(7)">&#8592; Voltar</button><button class="btn-p" onclick="saveAna()"><i class="ti ti-check"></i> Salvar perfil</button></div>
     </div>
   </div>
 </div>
@@ -845,11 +845,12 @@ function editAna(){
   if(ANA.obj)ad.aobj=ANA.obj;
 }
 function ag(n){
-  // Block 4 was removed (Exames) - map visual position to actual ab IDs
-  // Visual: 1->ab1, 2->ab2, 3->ab3, 4->ab5, 5->ab6, 6->ab7, 7->ab8, 8->ab9
-  var abMap=[0,1,2,3,5,6,7,8,9];
+  var abMap={1:1,2:2,3:3,4:5,5:6,6:7,7:8,8:9};
   var realN=abMap[n]||n;
-  for(var i=1;i<=9;i++){var e=document.getElementById('ab'+i);if(e)e.style.display=i===realN?'block':'none';}
+  for(var i=1;i<=9;i++){
+    var e=document.getElementById('ab'+i);
+    if(e)e.style.display=(i===realN)?'block':'none';
+  }
   document.getElementById('aprog').style.width=Math.max(12,Math.round((n-1)/8*100))+'%';
   document.getElementById('aplbl').textContent='Bloco '+n+' de 8';
   document.getElementById('achips').innerHTML=AL.map(function(l,i){
