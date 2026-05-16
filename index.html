@@ -458,7 +458,8 @@ button{font-family:inherit}
     <div class="card"><div class="sh"><div class="si b"><i class="ti ti-droplet"></i></div><div class="st">Hidrata&#231;&#227;o</div></div>
       <div class="fl" style="margin-bottom:0"><label>&#193;gua bebida hoje (litros)</label><input type="number" id="d-agua" placeholder="1.5" step="0.5" min="0" max="10"></div>
     </div>
-    <button class="btn-p" onclick="salvarDiario()"><i class="ti ti-check"></i> Salvar refei&#231;&#245;es</button>
+    <button class="btn-p" onclick="salvarDiario()"><i class="ti ti-brain"></i> Salvar e analisar</button>
+    <div id="diario-analise" style="display:none;margin-top:.875rem"></div>
   </div>
   <div id="diario-padrao" style="display:none">
     <div id="diario-padroes-content"></div>
@@ -942,15 +943,75 @@ async function salvarCheckin(){
 }
 async function salvarDiario(){
   var today=new Date().toISOString().split('T')[0];
-  var p={user_id:U.id,data:today,
-    cafe:(document.getElementById('d-cafe')||{}).value||null,
-    almoco:(document.getElementById('d-almoco')||{}).value||null,
-    jantar:(document.getElementById('d-jantar')||{}).value||null,
-    lanche:(document.getElementById('d-lanche')||{}).value||null,
-    agua:parseFloat((document.getElementById('d-agua')||{}).value)||null};
+  var cafe=(document.getElementById('d-cafe')||{}).value||null;
+  var almoco=(document.getElementById('d-almoco')||{}).value||null;
+  var jantar=(document.getElementById('d-jantar')||{}).value||null;
+  var lanche=(document.getElementById('d-lanche')||{}).value||null;
+  var agua=parseFloat((document.getElementById('d-agua')||{}).value)||null;
+
+  var p={user_id:U.id,data:today,cafe:cafe,almoco:almoco,jantar:jantar,lanche:lanche,agua:agua};
   var r=await db.from('diario_refeicoes').upsert(p,{onConflict:'user_id,data'});
   if(r.error){console.error('diario error:',r.error);toast('Erro ao salvar.',true);return;}
-  toast('Refeicoes salvas!');
+  toast('Refeicoes salvas! Analisando...');
+
+  // Show analysis loading state
+  var analBox=document.getElementById('diario-analise');
+  if(analBox){
+    analBox.style.display='block';
+    analBox.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:.875rem 1rem;background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);font-size:13px;color:var(--t800)">'
+      +'<i class="ti ti-loader spin" style="font-size:16px;color:var(--t)"></i> Analisando sua alimentacao de hoje...</div>';
+  }
+
+  // Build analysis prompt
+  var refeicoes=[];
+  if(cafe)refeicoes.push('Cafe da manha: '+cafe);
+  if(lanche)refeicoes.push('Lanche: '+lanche);
+  if(almoco)refeicoes.push('Almoco: '+almoco);
+  if(jantar)refeicoes.push('Jantar: '+jantar);
+  if(agua)refeicoes.push('Agua: '+agua+'L');
+
+  if(!refeicoes.length){
+    if(analBox)analBox.style.display='none';
+    return;
+  }
+
+  var perfil='';
+  if(ANA&&ANA.nome)perfil='Paciente: '+ANA.nome+'. ';
+  if(ANA&&ANA.obj)perfil+='Objetivo: '+ANA.obj+'. ';
+  if(ANA&&ANA.homa)perfil+='HOMA-IR: '+ANA.homa+'. ';
+
+  var prompt='Voce e nutricionista especialista em resistencia insulinica. '
+    +perfil
+    +'Analise o cardapio de hoje da paciente e de um feedback CURTO e PRATICO (maximo 5 linhas). '
+    +'Cardapio: '+refeicoes.join(' | ')+'. '
+    +'Aponte: 1 ponto positivo, 1 alimento que pode prejudicar a RI e 1 sugestao especifica para amanha. '
+    +'Seja direta e use linguagem simples. Nao use asteriscos. Responda em portugues.';
+
+  try{
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    var data=await resp.json();
+    var txt='';
+    if(data.content)for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
+
+    if(analBox&&txt){
+      analBox.innerHTML='<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:1rem 1.25rem">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:.625rem">'
+        +'<div style="width:28px;height:28px;border-radius:8px;background:var(--t);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<i class="ti ti-brain" style="font-size:14px;color:#fff"></i></div>'
+        +'<span style="font-size:13px;font-weight:500;color:var(--t800)">Analise do seu cardapio de hoje</span></div>'
+        +'<div style="font-size:13px;color:var(--tx);line-height:1.65">'+txt.replace(/
+/g,'<br>')+'</div></div>';
+    }
+  }catch(err){
+    console.error('analise diario error:',err);
+    if(analBox)analBox.style.display='none';
+    toast('Refeicoes salvas!');
+  }
 }
 function renderPadroes(){
   const padroes=[];
