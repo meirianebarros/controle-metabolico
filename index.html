@@ -309,7 +309,7 @@ button{font-family:inherit}
   <div id="ana-frm">
     <div class="schips" id="achips"></div>
     <div class="pb"><div class="pf" id="aprog" style="width:11%"></div></div>
-    <div style="font-size:11px;color:var(--m);margin-bottom:1rem" id="aplbl">Bloco 1 de 9</div>
+    <div style="font-size:11px;color:var(--m);margin-bottom:1rem" id="aplbl">Bloco 1 de 8</div>
     <div id="ab1">
       <div class="card"><div class="sh"><div class="si t"><i class="ti ti-user"></i></div><div class="st">Identifica&#231;&#227;o</div></div>
         <div class="fl"><label>Nome completo</label><input type="text" id="an" placeholder="Seu nome"></div>
@@ -339,7 +339,6 @@ button{font-family:inherit}
       <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(2)">&#8592; Voltar</button><button class="btn-p" onclick="ag(4)">Continuar &#8594;</button></div>
     </div>
     <div id="ab4" style="display:none">
-      
       <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(3)">&#8592; Voltar</button><button class="btn-p" onclick="ag(5)">Continuar &#8594;</button></div>
     </div>
     <div id="ab5" style="display:none">
@@ -796,7 +795,7 @@ function gerarProximaAcao(){
 }
 
 // ANAMNESE
-const AL=['Identif.','Medidas','Cl\u00ednico','Exames','Aliment.','Estilo','Sintomas','Medic.','Objetivo'];
+const AL=['Identif.','Medidas','Cl\u00ednico','Aliment.','Estilo','Sintomas','Medic.','Objetivo'];
 function renderAna(){
   if(ANA?.nome){
     document.getElementById('ana-res').style.display='block';
