@@ -1849,60 +1849,50 @@ function imprimirRelatorio(){
   var el=document.getElementById("rel-para-imprimir");
   if(!el)return;
 
-  // Capture chart images as base64 before opening print window
-  var chartImages={};
-  var chartIds=['chart-peso','chart-glic','chart-bem','chart-lab'];
-  chartIds.forEach(function(id){
-    var canvas=document.getElementById(id);
-    if(canvas){
-      try{chartImages[id]=canvas.toDataURL('image/png');}catch(e){}
-    }
-  });
-
-  // Clone the content and replace canvases with images
+  // Convert ALL canvases inside the report to images
   var clone=el.cloneNode(true);
-  chartIds.forEach(function(id){
-    if(chartImages[id]){
-      var canvas=clone.querySelector('#'+id);
-      if(canvas){
-        var img=document.createElement('img');
-        img.src=chartImages[id];
-        img.style.width='100%';
-        img.style.maxHeight='200px';
-        img.style.objectFit='contain';
-        img.style.display='block';
-        img.style.margin='0 auto';
-        canvas.parentNode.replaceChild(img,canvas);
+  var canvases=el.querySelectorAll('canvas');
+  var cloneCanvases=clone.querySelectorAll('canvas');
+
+  canvases.forEach(function(canvas, i){
+    try{
+      var dataUrl=canvas.toDataURL('image/png',1.0);
+      var img=document.createElement('img');
+      img.src=dataUrl;
+      img.style.cssText='width:100%;max-width:100%;height:auto;display:block;margin:4px 0';
+      if(cloneCanvases[i]&&cloneCanvases[i].parentNode){
+        cloneCanvases[i].parentNode.replaceChild(img, cloneCanvases[i]);
       }
-    }
+    }catch(e){console.error('canvas export error:',e);}
   });
 
-  var conteudo=clone.innerHTML;
-  var win=window.open("","_blank");
-  var html="<!DOCTYPE html><html><head><meta charset=UTF-8><title>Relatorio Medico</title>"
-    +"<style>"
-    +"*{box-sizing:border-box;margin:0;padding:0}"
-    +"body{font-family:Helvetica,Arial,sans-serif;color:#1A1A18;padding:2cm;font-size:13px;line-height:1.7}"
-    +"h2{font-size:16px;font-weight:600;margin:1.5rem 0 .5rem;border-bottom:1px solid #ddd;padding-bottom:.375rem}"
-    +"h3{font-size:14px;font-weight:500;margin:1rem 0 .3rem;color:#085041}"
-    +"ul{padding-left:1.5rem;margin-bottom:.75rem}li{margin-bottom:.25rem}"
-    +"strong{font-weight:600}"
-    +"img{max-width:100%;page-break-inside:avoid}"
-    +"canvas{display:none}"
-    +".graficos-section{page-break-before:auto}"
-    +".graficos-section > div{page-break-inside:avoid;margin-bottom:1.5rem}"
-    +"@media print{"
-    +"  body{padding:1.5cm;font-size:12px}"
-    +"  img{max-width:100%;height:auto}"
-    +"  .graficos-section > div{break-inside:avoid}"
-    +"}"
-    +"</style>"
-    +"</head><body>"
-    +conteudo
-    +"</body></html>";
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatorio Medico</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Helvetica,Arial,sans-serif;color:#1a1a18;padding:2cm;font-size:12px;line-height:1.65}'
+    +'h1,h2{font-size:15px;font-weight:700;margin:1.25rem 0 .4rem;color:#085041;border-bottom:1px solid #e0e0e0;padding-bottom:.3rem}'
+    +'h3{font-size:13px;font-weight:600;margin:.875rem 0 .25rem;color:#085041}'
+    +'p,br{line-height:1.65}'
+    +'strong{font-weight:700}'
+    +'ul{padding-left:1.25rem;margin:.5rem 0}li{margin-bottom:.2rem}'
+    +'img{width:100%!important;height:auto!important;display:block;margin:.5rem 0;page-break-inside:avoid}'
+    +'canvas{display:none!important}'
+    +'div{page-break-inside:avoid}'
+    +'@media print{'
+    +'  body{padding:1.5cm}'
+    +'  img{width:100%!important;height:auto!important}'
+    +'  canvas{display:none!important}'
+    +'}'
+    +'</style>'
+    +'</head><body>'
+    +clone.innerHTML
+    +'</body></html>';
+
+  var win=window.open('','_blank');
+  win.document.open();
   win.document.write(html);
   win.document.close();
-  setTimeout(function(){win.print();},800);
+  setTimeout(function(){win.focus();win.print();},1000);
 }
 
 function copiarRelatorio(){
