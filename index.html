@@ -1447,6 +1447,16 @@ async function renderDesafios(){
 
   el.innerHTML=html;
 }
+async async function iniciarDesafio(){
+  var hoje=new Date().toISOString().split('T')[0];
+  desafioInicio=hoje;
+  desafioProgress={};
+  var r=await db.from('desafio_progress').upsert({user_id:U.id,progress:{},inicio:hoje},{onConflict:'user_id'});
+  if(r.error){console.error('iniciar desafio error:',r.error);toast('Erro ao iniciar.',true);return;}
+  toast('Desafio iniciado! Bora!');
+  renderDesafios();
+}
+
 async function completarDesafio(dia){
   desafioProgress[dia]=new Date().toISOString();
   var r=await db.from('desafio_progress').upsert({user_id:U.id,progress:desafioProgress,inicio:desafioInicio},{onConflict:'user_id'});
