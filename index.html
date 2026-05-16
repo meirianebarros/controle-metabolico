@@ -1582,18 +1582,17 @@ async function gerarRelatorio(){
 }
 
 function imprimirRelatorio(){
-  const conteudo=document.getElementById("rel-para-imprimir")?.innerHTML;
+  var conteudo=document.getElementById("rel-para-imprimir")?document.getElementById("rel-para-imprimir").innerHTML:'';
   if(!conteudo)return;
-  const win=window.open("","_blank");
-  win.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>Relatorio</title><style>body{font-family:sans-serif;color:#1A1A18;padding:2cm;font-size:13px;line-height:1.7}h2{font-size:16px;font-weight:600;margin:1.5rem 0 .5rem;border-bottom:1px solid #ccc}h3{font-size:14px;font-weight:500;margin:1rem 0 .3rem;color:#085041}ul{padding-left:1.5rem}li{margin-bottom:.3rem}@media print{body{padding:1cm}}</style></head><body>"+conteudo+"
-<script>
-if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(){});
-  });
-}
-</script>
-</body></html>");
+  var win=window.open("","_blank");
+  var html="<!DOCTYPE html><html><head><meta charset=UTF-8><title>Relatorio</title>"
+    +"<style>body{font-family:sans-serif;color:#1A1A18;padding:2cm;font-size:13px;line-height:1.7}"
+    +"h2{font-size:16px;font-weight:600;margin:1.5rem 0 .5rem;border-bottom:1px solid #ccc}"
+    +"h3{font-size:14px;font-weight:500;margin:1rem 0 .3rem;color:#085041}"
+    +"ul{padding-left:1.5rem}li{margin-bottom:.3rem}"
+    +"@media print{body{padding:1cm}}</style></head><body>"
+    +conteudo+"</body></html>";
+  win.document.write(html);
   win.document.close();
   setTimeout(function(){win.print();},500);
 }
@@ -1616,11 +1615,7 @@ db.auth.onAuthStateChange((event,session)=>{
 </script>
 
 <script>
-if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(){});
-  });
-}
+try{if('serviceWorker' in navigator && location.hostname==='app.insulinresistance.com.br'){navigator.serviceWorker.register('/sw.js');}}catch(e){}
 </script>
 </body>
 </html>
