@@ -1583,7 +1583,7 @@ function renderChat(){
     el.innerHTML='<div class="empty"><i class="ti ti-message-circle"></i>Pergunte qualquer coisa sobre resist\u00eancia insul\u00ednica, alimenta\u00e7\u00e3o, exames ou sintomas.</div>';
     return;
   }
-  el.innerHTM  chatHistory.filter(function(m){return !m._thinking;}).map(function(m){
+  el.innerHTML=chatHistory.filter(function(m){return !m._thinking;}).map(function(m){
     var cls=m.role==='user'?'user':'ai';
     var txt=m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
     return '<div class="msg-'+cls+'"><div class="msg-bub '+cls+'">'+txt+'</div></div>';
