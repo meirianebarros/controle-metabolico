@@ -1701,6 +1701,7 @@ async function gerarRelatorio(){
   var btn=document.querySelector('#p-relatorio .btn-p');
   btn.disabled=true;
   btn.innerHTML='<i class="ti ti-loader spin"></i> Gerando...';
+
   var inicio=document.getElementById('rel-inicio').value;
   var fim=document.getElementById('rel-fim').value;
   var regsP=REGS.filter(function(r){return r.data>=inicio&&r.data<=fim;});
@@ -1717,34 +1718,31 @@ async function gerarRelatorio(){
   var hoje=new Date().toLocaleDateString('pt-BR');
   var dataI=new Date(inicio+'T12:00:00').toLocaleDateString('pt-BR');
   var dataF=new Date(fim+'T12:00:00').toLocaleDateString('pt-BR');
-  var varPeso=pesos.length>1?(pesos[pesos.length-1]-pesos[0]).toFixed(1):null;
-  var varCint=cintura.length>1?(cintura[cintura.length-1]-cintura[0]).toFixed(1):null;
   var exU=EXAMES.length?EXAMES[0]:null;
+
   var linhas=[
     'Paciente: '+(ANA&&ANA.nome?ANA.nome:'N/I'),
     'Sexo: '+(ANA&&ANA.sexo==='F'?'Feminino':ANA&&ANA.sexo==='M'?'Masculino':'N/I'),
     'Periodo: '+dataI+' a '+dataF+' ('+regsP.length+' dias)',
-    'Peso: '+(pesos.length?pesos[0]+'kg inicio / '+pesos[pesos.length-1]+'kg fim'+(varPeso?' var '+varPeso+'kg':''):'N/R'),
-    'Cintura: '+(cintura.length?cintura[0]+'cm inicio / '+cintura[cintura.length-1]+'cm fim'+(varCint?' var '+varCint+'cm':''):'N/R'),
+    'Peso: '+(pesos.length?pesos[0]+'kg inicio / '+pesos[pesos.length-1]+'kg fim':'N/R'),
+    'Cintura: '+(cintura.length?cintura[0]+'cm inicio / '+cintura[cintura.length-1]+'cm fim':'N/R'),
     'Glicemia media: '+avg(glics)+' mg/dL ('+glics.length+' med)',
-    'Energia media: '+avg(energias)+'/10, Sono: '+avg(sonos)+'/10, Craving: '+avg(cravings)+'/10, Estresse: '+avg(stresses)+'/10',
+    'Energia media: '+avg(energias)+'/10, Sono: '+avg(sonos)+'/10, Estresse: '+avg(stresses)+'/10',
     'Exercicio: '+exerc+'/'+regsP.length+' dias, Dieta: '+dieta+'/'+regsP.length+' dias',
     'Objetivo: '+(ANA&&ANA.obj?ANA.obj:'N/I'),
     'Medicamentos: '+(ANA&&ANA.meds?ANA.meds:'nenhum')
   ];
   if(exU){
-    var exLinha='Exames ('+new Date(exU.data+'T12:00:00').toLocaleDateString('pt-BR')+'):';
-    if(exU.glic)exLinha+=' Glicemia '+exU.glic+'mg/dL';
-    if(exU.insu)exLinha+=' Insulina '+exU.insu+'uU/mL';
-    if(exU.homa)exLinha+=' HOMA-IR '+exU.homa;
-    if(exU.hba1c)exLinha+=' HbA1c '+exU.hba1c+'%';
-    if(exU.tg)exLinha+=' TG '+exU.tg+'mg/dL';
-    if(exU.hdl)exLinha+=' HDL '+exU.hdl+'mg/dL';
-    if(exU.tg&&exU.hdl)exLinha+=' TG/HDL '+(exU.tg/exU.hdl).toFixed(2);
-    linhas.push(exLinha);
+    var ex='Exames ('+new Date(exU.data+'T12:00:00').toLocaleDateString('pt-BR')+'):';
+    if(exU.glic)ex+=' Gli '+exU.glic;
+    if(exU.insu)ex+=' Ins '+exU.insu;
+    if(exU.homa)ex+=' HOMA '+exU.homa;
+    if(exU.hba1c)ex+=' HbA1c '+exU.hba1c;
+    linhas.push(ex);
   }
   var dadosTxt=linhas.join(' | ');
   var prompt='Voce e uma IA de suporte clinico especializada em resistencia insulinica. Dados: '+dadosTxt+'. Gere relatorio clinico com: 1)Resumo Executivo 2)Evolucao Clinica 3)Aderencia 4)Pontos de Atencao 5)Recomendacoes para consulta. Maximo 400 palavras. Em portugues.';
+
   try{
     var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':CK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
@@ -1754,108 +1752,90 @@ async function gerarRelatorio(){
     if(data.content)for(var ci=0;ci<data.content.length;ci++){if(data.content[ci].text)txt+=data.content[ci].text;}
     if(!txt)throw new Error('Resposta vazia');
     var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+
+    // Build complete report HTML with chart placeholders inside
+    var datesP=regsP.map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
+    var pesoDates=regsP.filter(function(r){return r.peso;}).map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
+    var glicDates=regsP.filter(function(r){return r.glic;}).map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
+    var glicVals=regsP.filter(function(r){return r.glic;}).map(function(r){return r.glic;});
+
     var relHtml='<div id="rel-para-imprimir" style="background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:1.5rem">'
       +'<div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:.5px solid var(--bd)">'
       +'<div><div style="font-family:serif;font-size:20px;color:var(--t800)">controle metabolico</div>'
       +'<div style="font-size:12px;color:var(--m)">Relatorio de acompanhamento</div></div>'
       +'<div style="text-align:right;font-size:11px;color:var(--m)"><div>'+hoje+'</div><div>'+dataI+' a '+dataF+'</div><div>'+regsP.length+' dias</div></div></div>'
-      +'<div style="font-size:14px;line-height:1.75">'+fmt+'</div>'
-      +'<div style="margin-top:1.5rem;padding-top:1rem;border-top:.5px solid var(--bd);font-size:11px;color:var(--m);font-style:italic">Relatorio gerado pelo Controle Metabolico. Nao substitui avaliacao medica.</div></div>';
+      +'<div style="font-size:14px;line-height:1.75;margin-bottom:1.5rem">'+fmt+'</div>';
 
-    // Add charts section if we have data
-    if(regsP.length>1||EXAMES.length>0){
-      relHtml+='<div class="graficos-section" style="margin-top:1.5rem;padding-top:1rem;border-top:.5px solid var(--bd)">'
-        +'<div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--t800)">Evolucao Grafica</div>';
+    // Charts section INSIDE the report
+    relHtml+='<div style="padding-top:1rem;border-top:.5px solid var(--bd)">'
+      +'<div style="font-size:13px;font-weight:600;color:var(--t800);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.5px">Evolucao Grafica</div>';
 
-      // Chart 1: Peso e Cintura
-      if(pesos.length>1){
-        relHtml+='<div style="margin-bottom:1.25rem">'
-          +'<div style="font-size:12px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.5rem">Peso (kg)</div>'
-          +'<canvas id="chart-peso" height="80"></canvas></div>';
-      }
-
-      // Chart 2: Glicemia e Insulina (from registros)
-      var glicArr=regsP.filter(function(r){return r.glic;}).map(function(r){return {x:r.data,y:r.glic};});
-      if(glicArr.length>1){
-        relHtml+='<div style="margin-bottom:1.25rem">'
-          +'<div style="font-size:12px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.5rem">Glicemia capilar (mg/dL)</div>'
-          +'<canvas id="chart-glic" height="80"></canvas></div>';
-      }
-
-      // Chart 3: Bem-estar (energia, sono, estresse)
-      if(energias.length>1){
-        relHtml+='<div style="margin-bottom:1.25rem">'
-          +'<div style="font-size:12px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.5rem">Bem-estar (escala 1-10)</div>'
-          +'<canvas id="chart-bem" height="90"></canvas></div>';
-      }
-
-      // Chart 4: HOMA-IR from exames
-      var homaExames=EXAMES.filter(function(e){return e.homa;}).slice(0,10).reverse();
-      var glicExames=EXAMES.filter(function(e){return e.glic;}).slice(0,10).reverse();
-      var insuExames=EXAMES.filter(function(e){return e.insu;}).slice(0,10).reverse();
-      if(homaExames.length>0||glicExames.length>0||insuExames.length>0){
-        relHtml+='<div style="margin-bottom:1.25rem">'
-          +'<div style="font-size:12px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.5rem">Marcadores laboratoriais</div>'
-          +'<canvas id="chart-lab" height="90"></canvas></div>';
-      }
-
-      relHtml+='</div>';
+    if(pesos.length>1){
+      relHtml+='<div style="margin-bottom:1.25rem">'
+        +'<div style="font-size:11px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.375rem">Peso (kg)</div>'
+        +'<canvas id="rchart-peso" height="70" style="width:100%"></canvas></div>';
     }
-    var btns='<div style="display:flex;gap:8px;margin-top:.875rem"><button onclick="imprimirRelatorio()" class="btn-p"><i class="ti ti-printer"></i> Imprimir</button><button onclick="copiarRelatorio()" class="btn-s"><i class="ti ti-copy"></i> Copiar</button></div>';
+    if(glicVals.length>1){
+      relHtml+='<div style="margin-bottom:1.25rem">'
+        +'<div style="font-size:11px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.375rem">Glicemia capilar (mg/dL)</div>'
+        +'<canvas id="rchart-glic" height="70" style="width:100%"></canvas></div>';
+    }
+    if(energias.length>1){
+      relHtml+='<div style="margin-bottom:1.25rem">'
+        +'<div style="font-size:11px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.375rem">Bem-estar — Energia / Sono / Estresse (1-10)</div>'
+        +'<canvas id="rchart-bem" height="80" style="width:100%"></canvas></div>';
+    }
+    var homaE=EXAMES.filter(function(e){return e.homa;}).slice(0,10).reverse();
+    var glicE=EXAMES.filter(function(e){return e.glic;}).slice(0,10).reverse();
+    var insuE=EXAMES.filter(function(e){return e.insu;}).slice(0,10).reverse();
+    if(homaE.length>0||glicE.length>0||insuE.length>0){
+      relHtml+='<div style="margin-bottom:1.25rem">'
+        +'<div style="font-size:11px;font-weight:500;color:var(--m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.375rem">Marcadores laboratoriais — HOMA-IR / Glicemia / Insulina</div>'
+        +'<canvas id="rchart-lab" height="80" style="width:100%"></canvas></div>';
+    }
+    relHtml+='</div>';
+
+    relHtml+='<div style="margin-top:1.5rem;padding-top:1rem;border-top:.5px solid var(--bd);font-size:11px;color:var(--m);font-style:italic">'
+      +'Relatorio gerado pelo Controle Metabolico. Nao substitui avaliacao medica.</div></div>';
+
+    var btns='<div style="display:flex;gap:8px;margin-top:.875rem">'
+      +'<button onclick="imprimirRelatorio()" class="btn-p"><i class="ti ti-printer"></i> Imprimir / PDF</button>'
+      +'<button onclick="copiarRelatorio()" class="btn-s"><i class="ti ti-copy"></i> Copiar texto</button></div>';
+
     document.getElementById('relatorio-output').innerHTML=relHtml+btns;
     document.getElementById('relatorio-output').style.display='block';
     document.querySelector('.pc').scrollTop=99999;
 
-    // Render charts after DOM update
+    // Render charts inside the report after DOM is ready
     setTimeout(function(){
-      var datesP=regsP.map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
+      var co={responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{ticks:{font:{size:9}}}}};
 
-      // Chart: Peso
-      var cpeso=document.getElementById('chart-peso');
-      if(cpeso&&pesos.length>1){
-        var pesoDates=regsP.filter(function(r){return r.peso;}).map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
-        new Chart(cpeso,{type:'line',data:{labels:pesoDates,datasets:[{label:'Peso kg',data:pesos,borderColor:'#085041',backgroundColor:'#085041',borderWidth:2,pointRadius:3,tension:.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+      if(document.getElementById('rchart-peso')&&pesos.length>1){
+        new Chart(document.getElementById('rchart-peso'),{type:'line',data:{labels:pesoDates,datasets:[{label:'Peso',data:pesos,borderColor:'#085041',backgroundColor:'#08504115',borderWidth:2,pointRadius:3,fill:true,tension:.3}]},options:co});
       }
-
-      // Chart: Glicemia
-      var cglic=document.getElementById('chart-glic');
-      if(cglic){
-        var glicR=regsP.filter(function(r){return r.glic;});
-        var glicDates=glicR.map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
-        var glicVals=glicR.map(function(r){return r.glic;});
-        if(glicVals.length>1){
-          new Chart(cglic,{type:'line',data:{labels:glicDates,datasets:[{label:'Glicemia',data:glicVals,borderColor:'#BA7517',backgroundColor:'#BA751720',borderWidth:2,pointRadius:3,fill:true,tension:.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
-        }
+      if(document.getElementById('rchart-glic')&&glicVals.length>1){
+        new Chart(document.getElementById('rchart-glic'),{type:'line',data:{labels:glicDates,datasets:[{label:'Glicemia',data:glicVals,borderColor:'#BA7517',backgroundColor:'#BA751715',borderWidth:2,pointRadius:3,fill:true,tension:.3}]},options:co});
       }
-
-      // Chart: Bem-estar
-      var cbem=document.getElementById('chart-bem');
-      if(cbem&&energias.length>1){
-        new Chart(cbem,{type:'line',data:{labels:datesP,datasets:[
+      if(document.getElementById('rchart-bem')&&energias.length>1){
+        var coBem={responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:10}}},scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{min:0,max:10,ticks:{font:{size:9}}}}};
+        new Chart(document.getElementById('rchart-bem'),{type:'line',data:{labels:datesP,datasets:[
           {label:'Energia',data:energias,borderColor:'#1D9E75',borderWidth:2,pointRadius:2,tension:.3},
           {label:'Sono',data:sonos,borderColor:'#3C3489',borderWidth:2,pointRadius:2,tension:.3},
           {label:'Estresse',data:stresses,borderColor:'#E24B4A',borderWidth:2,pointRadius:2,tension:.3}
-        ]},options:{responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:10}}},scales:{x:{ticks:{font:{size:9}}},y:{min:0,max:10,ticks:{font:{size:9}}}}}});
+        ]},options:coBem});
       }
-
-      // Chart: Laboratorial (HOMA, Glicemia, Insulina from exames)
-      var clab=document.getElementById('chart-lab');
-      if(clab){
-        var labDatasets=[];
-        var homaE=EXAMES.filter(function(e){return e.homa;}).slice(0,10).reverse();
-        var glicE=EXAMES.filter(function(e){return e.glic;}).slice(0,10).reverse();
-        var insuE=EXAMES.filter(function(e){return e.insu;}).slice(0,10).reverse();
-        var labDates=homaE.length>glicE.length?homaE:glicE;
-        labDates=labDates.length>insuE.length?labDates:insuE;
-        var dates=labDates.map(function(e){return new Date(e.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
-        if(homaE.length>0)labDatasets.push({label:'HOMA-IR',data:homaE.map(function(e){return e.homa;}),borderColor:'#1D9E75',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y'});
-        if(glicE.length>0)labDatasets.push({label:'Glicemia',data:glicE.map(function(e){return e.glic;}),borderColor:'#BA7517',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'});
-        if(insuE.length>0)labDatasets.push({label:'Insulina',data:insuE.map(function(e){return e.insu;}),borderColor:'#3C3489',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'});
-        if(labDatasets.length>0){
-          new Chart(clab,{type:'line',data:{labels:dates,datasets:labDatasets},options:{responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:10}}},scales:{x:{ticks:{font:{size:9}}},y:{position:'left',ticks:{font:{size:9}},title:{display:true,text:'HOMA',font:{size:8}}},y2:{position:'right',ticks:{font:{size:9}},grid:{display:false},title:{display:true,text:'mg/dL',font:{size:8}}}}}});
+      if(document.getElementById('rchart-lab')){
+        var labDS=[];
+        var labDts=[];
+        if(homaE.length>0){labDts=homaE.map(function(e){return new Date(e.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});labDS.push({label:'HOMA-IR',data:homaE.map(function(e){return e.homa;}),borderColor:'#1D9E75',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y'});}
+        if(glicE.length>0){if(!labDts.length)labDts=glicE.map(function(e){return new Date(e.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});labDS.push({label:'Glicemia',data:glicE.map(function(e){return e.glic;}),borderColor:'#BA7517',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'});}
+        if(insuE.length>0){if(!labDts.length)labDts=insuE.map(function(e){return new Date(e.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});labDS.push({label:'Insulina',data:insuE.map(function(e){return e.insu;}),borderColor:'#3C3489',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'});}
+        if(labDS.length){
+          new Chart(document.getElementById('rchart-lab'),{type:'line',data:{labels:labDts,datasets:labDS},options:{responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:10}}},scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{position:'left',ticks:{font:{size:9}},title:{display:true,text:'HOMA',font:{size:8}}},y2:{position:'right',ticks:{font:{size:9}},grid:{display:false},title:{display:true,text:'mg/dL',font:{size:8}}}}}});
         }
       }
-    },300);
+    },400);
+
   }catch(err){
     console.error('relatorio error:',err);
     document.getElementById('relatorio-output').innerHTML='<div class="empty"><i class="ti ti-alert-circle"></i>Erro: '+err.message+'</div>';
