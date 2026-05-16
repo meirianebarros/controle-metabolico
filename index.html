@@ -817,13 +817,46 @@ function renderAna(){
     ag(1);
   }
 }
-function editAna(){document.getElementById('ana-res').style.display='none';document.getElementById('ana-frm').style.display='block';ag(1);if(ANA.nome)document.getElementById('an').value=ANA.nome;}
+function editAna(){
+  document.getElementById('ana-res').style.display='none';
+  document.getElementById('ana-frm').style.display='block';
+  ag(1);
+  // Populate all fields from saved ANA
+  var setV=function(id,v){var el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+  setV('an',ANA.nome);
+  setV('anas',ANA.nasc);
+  setV('aal',ANA.altura);
+  setV('ape',ANA.peso);
+  setV('aca',ANA.ca);
+  setV('acq',ANA.cq);
+  setV('amed',ANA.meds);
+  setV('asup',ANA.sups);
+  // Restore ad object
+  if(ANA.sexo)ad.asx=ANA.sexo;
+  if(ANA.obj)ad.aobj=ANA.obj;
+  if(ANA.ativ)ad.aat=ANA.ativ;
+  if(ANA.refeicoes)ad.aref=ANA.refeicoes;
+  if(ANA.stress)ad.astress=ANA.stress;
+  if(ANA.qsono)ad.asono=ANA.qsono;
+  if(ANA.diab!=null)ad.adb=ANA.diab;
+  if(ANA.prediab!=null)ad.apd=ANA.prediab;
+  if(ANA.hiper!=null)ad.ahp=ANA.hiper;
+  if(ANA.sindmet!=null)ad.asm=ANA.sindmet;
+  if(ANA.obj)ad.aobj=ANA.obj;
+}
 function ag(n){
-  for(let i=1;i<=9;i++){const e=document.getElementById('ab'+i);if(e)e.style.display=i===n?'block':'none';}
-  document.getElementById('aprog').style.width=Math.max(11,Math.round((n-1)/9*100))+'%';
-  document.getElementById('aplbl').textContent='Bloco '+n+' de 9';
-  document.getElementById('achips').innerHTML=AL.map((l,i)=>{const s=i+1<n?'d':i+1===n?'c':'';return`<span class="sc ${s}">${i+1<n?'\u2713 ':''}`+l+'</span>';}).join('');
-  if(n===3){const s=document.getElementById('asop');if(s)s.style.display=ad.asx==='F'?'block':'none';}
+  // Block 4 was removed (Exames) - map visual position to actual ab IDs
+  // Visual: 1->ab1, 2->ab2, 3->ab3, 4->ab5, 5->ab6, 6->ab7, 7->ab8, 8->ab9
+  var abMap=[0,1,2,3,5,6,7,8,9];
+  var realN=abMap[n]||n;
+  for(var i=1;i<=9;i++){var e=document.getElementById('ab'+i);if(e)e.style.display=i===realN?'block':'none';}
+  document.getElementById('aprog').style.width=Math.max(12,Math.round((n-1)/8*100))+'%';
+  document.getElementById('aplbl').textContent='Bloco '+n+' de 8';
+  document.getElementById('achips').innerHTML=AL.map(function(l,i){
+    var s=i+1<n?'d':i+1===n?'c':'';
+    return '<span class="sc '+s+'">'+(i+1<n?'\u2713 ':'')+l+'</span>';
+  }).join('');
+  if(n===3){var s=document.getElementById('asop');if(s)s.style.display=ad&&ad.asx==='F'?'block':'none';}
 }
 function ao(g,btn,v){document.querySelectorAll('#'+g+' .opt').forEach(b=>b.classList.remove('on'));btn.classList.add('on');ad[g]=v;}
 function ay(g,btn,v){document.querySelectorAll('#'+g+' .yb').forEach(b=>b.classList.remove('sy','sn'));btn.classList.add(v?'sy':'sn');ad[g]=v;}
@@ -831,14 +864,61 @@ function choma(){const g=parseFloat(document.getElementById('agl').value),i=pars
 function cimc(){const p=parseFloat(document.getElementById('ape').value),h=parseFloat(document.getElementById('aal').value)||parseFloat(ANA.altura)||0;if(p&&h){const imc=(p/((h/100)**2)).toFixed(1);document.getElementById('aimc').value=imc;ad.imc=parseFloat(imc);}}
 function crcq(){const ca=parseFloat(document.getElementById('aca').value),cq=parseFloat(document.getElementById('acq').value);if(ca&&cq){const r=(ca/cq).toFixed(2);ad.rcq=parseFloat(r);document.getElementById('arcqv').textContent=r;document.getElementById('arcq').style.display='flex';}}
 async function saveAna(){
-  const n=v=>v===''||v===undefined||v===null?null:v;
-  const p={nome:document.getElementById('an').value||ANA.nome,nasc:n(document.getElementById('anas').value),altura:n(parseFloat(document.getElementById('aal').value)||parseFloat(ANA.altura)),sexo:ad.asx||ANA.sexo,peso:n(parseFloat(document.getElementById('ape').value)||parseFloat(ANA.peso)),ca:n(parseFloat(document.getElementById('aca').value)),cq:n(parseFloat(document.getElementById('acq').value)),imc:n(ad.imc),rcq:n(ad.rcq),diab:n(ad.adb),prediab:n(ad.apd),hiper:n(ad.ahp),sindmet:n(ad.asm),sop:n(ad.asp),esteat:n(ad.aeh),famdiab:n(ad.afd),glic:n(parseFloat(document.getElementById('agl').value)),insu:n(parseFloat(document.getElementById('ains').value)),homa:n(ad.homa),hba1c:n(parseFloat(document.getElementById('ahb').value)),tg:n(parseFloat(document.getElementById('atg').value)),hdl:n(parseFloat(document.getElementById('ahdl').value)),tsh:n(parseFloat(document.getElementById('atsh').value)),refeicoes:n(ad.aref),ultra:n(ad.ault),bebac:n(ad.aba),jejum:n(ad.ajj),ativ:n(ad.aat),hsono:n(parseFloat(document.getElementById('ahs').value)),qsono:n(document.getElementById('aqs').value),stress:n(ad.ast),sentado:n(ad.asen),cansaco:n(ad.acn),fome:n(ad.afm),craving:n(ad.acr),dificpeso:n(ad.adp),acantose:n(ad.aac),meds:n(document.getElementById('amed').value),sups:n(document.getElementById('asup').value),obj:n(ad.aobj)};
-  const{data:ex}=await db.from('anamneses').select('id').eq('user_id',U.id).maybeSingle();
-  let error;
-  if(ex){const r=await db.from('anamneses').update(p).eq('user_id',U.id);error=r.error;}
-  else{const r=await db.from('anamneses').insert({...p,user_id:U.id});error=r.error;}
-  if(error){toast('Erro ao salvar.',true);console.error(error);return;}
-  ANA={...p,user_id:U.id};toast('Perfil salvo!');renderAna();renderHome();
+  var n=function(v){return(v===''||v===undefined||v===null)?null:v;};
+  var getV=function(id){var el=document.getElementById(id);return el?el.value:null;};
+  var getN=function(id){var el=document.getElementById(id);return el?parseFloat(el.value)||null:null;};
+
+  var p={
+    nome:getV('an')||ANA.nome,
+    nasc:n(getV('anas')),
+    altura:n(getN('aal')||parseFloat(ANA.altura)),
+    sexo:ad.asx||ANA.sexo,
+    peso:n(getN('ape')||parseFloat(ANA.peso)),
+    ca:n(getN('aca')),
+    cq:n(getN('acq')),
+    imc:n(ad.imc),
+    rcq:n(ad.rcq),
+    diab:n(ad.adb),
+    prediab:n(ad.apd),
+    hiper:n(ad.ahp),
+    sindmet:n(ad.asm),
+    sop:n(ad.asp),
+    esteat:n(ad.aeh),
+    famdiab:n(ad.afd),
+    refeicoes:n(ad.aref),
+    intol:n(ad.aint),
+    gut:n(ad.agut),
+    jeju:n(ad.ajeju),
+    ativ:n(ad.aat),
+    treinos:n(ad.atrei),
+    stress:n(ad.astress),
+    qsono:n(ad.asono),
+    tabagismo:n(ad.atab),
+    alcool:n(ad.aalc),
+    cansaco:n(ad.acn),
+    fome:n(ad.afm),
+    vontade_doce:n(ad.acr),
+    dificpeso:n(ad.adp),
+    acantose:n(ad.aac),
+    meds:n(getV('amed')),
+    sups:n(getV('asup')),
+    obj:n(ad.aobj)
+  };
+
+  var ex=await db.from('anamneses').select('id').eq('user_id',U.id).maybeSingle();
+  var error;
+  if(ex&&ex.data){
+    var r=await db.from('anamneses').update(p).eq('user_id',U.id);
+    error=r.error;
+  }else{
+    var r2=await db.from('anamneses').insert(Object.assign({},p,{user_id:U.id}));
+    error=r2.error;
+  }
+  if(error){toast('Erro ao salvar.',true);console.error('saveAna error:',error);return;}
+  ANA=Object.assign({},p,{user_id:U.id});
+  toast('Perfil salvo!');
+  renderAna();
+  renderHome();
 }
 
 // REGISTRO DIARIO
