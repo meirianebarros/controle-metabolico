@@ -339,12 +339,7 @@ button{font-family:inherit}
       <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(2)">&#8592; Voltar</button><button class="btn-p" onclick="ag(4)">Continuar &#8594;</button></div>
     </div>
     <div id="ab4" style="display:none">
-      <div class="card"><div class="sh"><div class="si g"><i class="ti ti-test-pipe"></i></div><div class="st">Exames (opcional)</div></div>
-        <div class="g2"><div class="fl"><label>Glicemia jejum (mg/dL)</label><input type="number" id="agl" placeholder="100" oninput="choma()"></div><div class="fl"><label>Insulina jejum (&#181;U/mL)</label><input type="number" id="ains" placeholder="10" oninput="choma()"></div></div>
-        <div class="cb" id="ahbox" style="display:none"><span style="font-size:12px;color:var(--m)">HOMA-IR</span><span id="ahval" style="font-size:15px;font-weight:500"></span></div>
-        <div class="g2" style="margin-top:.75rem"><div class="fl"><label>HbA1c (%)</label><input type="number" id="ahb" placeholder="5.5" step="0.1"></div><div class="fl"><label>Triglicer&#237;deos</label><input type="number" id="atg" placeholder="mg/dL"></div></div>
-        <div class="g2"><div class="fl"><label>HDL</label><input type="number" id="ahdl" placeholder="mg/dL"></div><div class="fl"><label>TSH</label><input type="number" id="atsh" placeholder="mUI/L" step="0.1"></div></div>
-      </div>
+      
       <div style="display:flex;gap:8px"><button class="btn-s" onclick="ag(3)">&#8592; Voltar</button><button class="btn-p" onclick="ag(5)">Continuar &#8594;</button></div>
     </div>
     <div id="ab5" style="display:none">
@@ -543,7 +538,7 @@ button{font-family:inherit}
       <div class="g2"><div class="fl"><label>Ferritina</label><input type="number" id="ex-ferr" placeholder="ng/mL"></div><div class="fl"><label>TSH</label><input type="number" id="ex-tsh" placeholder="mUI/L" step="0.1"></div></div>
     </div>
     <div class="card"><div class="sh"><div class="si a"><i class="ti ti-calendar"></i></div><div class="st">Data do exame</div></div>
-      <input type="date" id="ex-data">
+      <input type="date" id="ex-data" style="width:100%;padding:10px 12px;border:.5px solid var(--bd);border-radius:var(--rm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--tx)">
     </div>
     <button class="btn-p" onclick="salvarExame()"><i class="ti ti-check"></i> Salvar exame</button>
   </div>
@@ -1264,7 +1259,8 @@ function examTab(t,btn){
 }
 async function salvarExame(){
   var n=function(v){return(v===''||v===undefined||v===null)?null:(parseFloat(v)||null);};
-  var dataVal=(document.getElementById('ex-data')||{}).value||new Date().toISOString().split('T')[0];
+  var dfld=document.getElementById('ex-data');
+  var dataVal=(dfld&&dfld.value&&dfld.value.length===10)?dfld.value:new Date().toISOString().split('T')[0];
   var p={user_id:U.id,data:dataVal,
     glic:n((document.getElementById('ex-glic')||{}).value),
     insu:n((document.getElementById('ex-ins')||{}).value),
