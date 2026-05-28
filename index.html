@@ -1179,7 +1179,7 @@ async function salvarDiario(){
         +'<div style="width:28px;height:28px;border-radius:8px;background:var(--t);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
         +'<i class="ti ti-brain" style="font-size:14px;color:#fff"></i></div>'
         +'<span style="font-size:13px;font-weight:500;color:var(--t800)">Analise do seu cardapio de hoje</span></div>'
-        +'<div style="font-size:13px;color:var(--tx);line-height:1.65">'+txt.replace(/\n/g,'<br>')+'</div></div>';
+        +'<div style="font-size:13px;color:var(--tx);line-height:1.65">'+txt.split('\n').join('<br>')+'</div></div>';
     }
   }catch(err){
     console.error('analise diario error:',err);
@@ -1275,7 +1275,7 @@ async function renderPadroes(){
         var txt='';
         if(data.content)for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
         if(txt){
-          padroes.push({icone:'ti-sparkles',cor:'t',txt:txt.replace(/\n/g,' | ')});
+          padroes.push({icone:'ti-sparkles',cor:'t',txt:txt.split('\n').join(' | ')});
         }
       }
     }catch(e){console.error('ai padroes error:',e);}
@@ -1380,7 +1380,7 @@ async function abrirCardapio(id){
     var txt='';
     if(data.content)for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
     if(!txt)throw new Error('Resposta vazia');
-    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n\n').join('<br><br>').split('\n').join('<br>');
     el.innerHTML='<h2 style="font-size:17px;font-weight:500;margin-bottom:1rem">'+p.nome+'</h2>'
       +'<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--rm);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t800)">Gerado com IA para resistencia insulinica</div>'
       +'<div style="font-size:14px;line-height:1.8">'+fmt+'</div>';
@@ -1426,7 +1426,7 @@ async function abrirTreino(id){
     var txt='';
     if(data.content)for(var i=0;i<data.content.length;i++){if(data.content[i].text)txt+=data.content[i].text;}
     if(!txt)throw new Error('Resposta vazia');
-    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n\n').join('<br><br>').split('\n').join('<br>');
     el.innerHTML='<button onclick="renderTreinos()" style="background:none;border:none;cursor:pointer;color:var(--m);font-family:inherit;font-size:13px;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:1rem"><i class="ti ti-arrow-left"></i> Voltar</button>'
       +'<h2 style="font-size:17px;font-weight:500;margin-bottom:.25rem">'+t.nome+'</h2>'
       +'<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t800)">Plano progressivo gerado com IA</div>'
@@ -1445,7 +1445,7 @@ async function gerarTreinoHoje(){
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':CK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,messages:[{role:'user',content:`Personal trainer especialista em RI. Nvel de atividade: ${ativ}. Crie um treino RPIDO para hoje (20-30 min) adequado para pessoa com resistncia insulnica. Formato: aquecimento 5min + treino principal + volta  calma. Seja direto e motivador.`}]})});
     const data=await resp.json();
     const txt=data.content?.map(c=>c.text||'').join('')||'';
-    const fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br>');
+    const fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n\n').join('<br>');
     el.innerHTML=`<div style="background:var(--t50);border:.5px solid var(--t100);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t800)"><i class="ti ti-sparkles"></i> Treino gerado para hoje</div><div style="font-size:14px;line-height:1.65">${fmt}</div>`;
   }catch(e){el.innerHTML='<div class="empty"><i class="ti ti-barbell"></i>Adicione a chave da API para gerar treinos.</div>';}
 }
@@ -1924,7 +1924,7 @@ function renderChat(){
   }
   el.innerHTML=chatHistory.filter(function(m){return !m._thinking;}).map(function(m){
     var cls=m.role==='user'?'user':'ai';
-    var txt=m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    var txt=m.content.split('\n').join('<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
     return '<div class="msg-'+cls+'"><div class="msg-bub '+cls+'">'+txt+'</div></div>';
   }).join('');
   el.scrollTop=el.scrollHeight;
@@ -2095,7 +2095,7 @@ async function gerarRelatorio(){
     var txt='';
     if(data.content)for(var ci=0;ci<data.content.length;ci++){if(data.content[ci].text)txt+=data.content[ci].text;}
     if(!txt)throw new Error('Resposta vazia');
-    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+    var fmt=txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n\n').join('<br><br>').split('\n').join('<br>');
 
     // Build complete report HTML with chart placeholders inside
     var datesP=regsP.map(function(r){return new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});});
