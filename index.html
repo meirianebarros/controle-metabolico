@@ -797,19 +797,105 @@ function gerarProximaAcao(){
 
 // ANAMNESE
 const AL=['Identif.','Medidas','Cl\u00ednico','Aliment.','Estilo','Sintomas','Medic.','Objetivo'];
+function calcIdadeMetabolica(){
+  // Estimate metabolic age based on available data
+  // Base: chronological age from birth date
+  var idadeCrono = null;
+  if(ANA.nasc){
+    var nasc = new Date(ANA.nasc);
+    var hoje = new Date();
+    idadeCrono = Math.floor((hoje - nasc) / (365.25*24*3600*1000));
+  }
+  
+  var score = 0; // positive = younger, negative = older
+  var fatores = 0;
+  
+  // HOMA-IR: normal <2, elevated adds age
+  if(ANA.homa){
+    fatores++;
+    var homa = parseFloat(ANA.homa);
+    if(homa < 1.5) score += 5;
+    else if(homa < 2.0) score += 2;
+    else if(homa < 2.5) score -= 2;
+    else if(homa < 3.5) score -= 5;
+    else score -= 10;
+  }
+  // Waist circumference
+  if(ANA.ca && ANA.sexo){
+    fatores++;
+    var ca = parseFloat(ANA.ca);
+    var limCA = ANA.sexo==='F' ? 80 : 94;
+    if(ca < limCA - 5) score += 4;
+    else if(ca < limCA) score += 1;
+    else if(ca < limCA + 10) score -= 3;
+    else score -= 7;
+  }
+  // Physical activity
+  if(ANA.ativ){
+    fatores++;
+    var a = ANA.ativ.toLowerCase();
+    if(a.includes('intenso')||a.includes('diario')) score += 5;
+    else if(a.includes('moderado')||a.includes('vezes')) score += 2;
+    else if(a.includes('leve')||a.includes('caminhada')) score += 0;
+    else score -= 4;
+  }
+  // Sleep quality
+  if(ANA.qsono){
+    fatores++;
+    var s = ANA.qsono.toLowerCase();
+    if(s.includes('otimo')||s.includes('bom')) score += 3;
+    else if(s.includes('regular')) score += 0;
+    else score -= 4;
+  }
+  // Stress
+  if(ANA.stress){
+    fatores++;
+    var st = ANA.stress.toLowerCase();
+    if(st.includes('baixo')) score += 3;
+    else if(st.includes('moderado')) score += 0;
+    else score -= 5;
+  }
+  // Symptoms
+  if(ANA.cansaco) score -= 2;
+  if(ANA.dificpeso) score -= 2;
+  if(ANA.acantose) score -= 3;
+  
+  if(fatores < 2) return null;
+  
+  var idadeMetab = idadeCrono ? Math.max(18, idadeCrono - score) : null;
+  return {idadeMetab: idadeMetab ? Math.round(idadeMetab) : null, score: score, idadeCrono: idadeCrono};
+}
+
 function renderAna(){
   if(ANA?.nome){
     document.getElementById('ana-res').style.display='block';
     document.getElementById('ana-frm').style.display='none';
-    const ini=ANA.nome.split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
+    var ini=ANA.nome.split(' ').map(function(p){return p[0];}).join('').substring(0,2).toUpperCase();
     document.getElementById('pini').textContent=ini;
     document.getElementById('pnm').textContent=ANA.nome;
     document.getElementById('peml').textContent=U.email;
-    let h='';
-    if(ANA.peso)h+=`<div class="mc"><div class="ml">Peso</div><div class="mv">${ANA.peso}<span class="mu">kg</span></div></div>`;
-    if(ANA.homa)h+=`<div class="mc"><div class="ml">HOMA-IR</div><div class="mv">${ANA.homa}</div></div>`;
-    if(ANA.obj)h+=`<div class="mc"><div class="ml">Objetivo</div><div class="mv" style="font-size:13px">${ANA.obj}</div></div>`;
-    if(ANA.ativ)h+=`<div class="mc"><div class="ml">Atividade</div><div class="mv" style="font-size:13px">${ANA.ativ}</div></div>`;
+    var h='';
+    if(ANA.peso)h+='<div class="mc"><div class="ml">Peso</div><div class="mv">'+ANA.peso+'<span class="mu">kg</span></div></div>';
+    if(ANA.homa)h+='<div class="mc"><div class="ml">HOMA-IR</div><div class="mv">'+ANA.homa+'</div></div>';
+    if(ANA.obj)h+='<div class="mc"><div class="ml">Objetivo</div><div class="mv" style="font-size:13px">'+ANA.obj+'</div></div>';
+    if(ANA.ativ)h+='<div class="mc"><div class="ml">Atividade</div><div class="mv" style="font-size:13px">'+ANA.ativ+'</div></div>';
+    
+    // Metabolic age
+    var im = calcIdadeMetabolica();
+    if(im && im.idadeMetab){
+      var diff = im.idadeCrono ? im.idadeMetab - im.idadeCrono : 0;
+      var cor = diff <= -3 ? 'var(--t800)' : diff <= 2 ? '#BA7517' : 'var(--r800)';
+      var bg = diff <= -3 ? 'var(--t50)' : diff <= 2 ? 'var(--a50)' : 'var(--r50)';
+      var msg = diff <= -3 ? 'Otimo!' : diff <= 2 ? 'Atencao' : 'Precisa melhorar';
+      h+='<div class="mc" style="grid-column:1/-1;background:'+bg+';border-color:transparent">'
+        +'<div class="ml" style="color:'+cor+'">Idade Metabolica Estimada</div>'
+        +'<div style="display:flex;align-items:baseline;gap:8px">'
+        +'<div class="mv" style="color:'+cor+'">'+im.idadeMetab+' anos</div>'
+        +(im.idadeCrono?'<div style="font-size:12px;color:'+cor+'">'+msg+(diff!==0?' ('+Math.abs(diff)+'a '+(diff<0?'mais jovem':'mais velha')+')'):'')+'</div>'
+        +'<div style="font-size:11px;color:var(--m);margin-top:2px">Estimativa baseada no perfil metabolico</div>'
+        +'</div>';
+    }
+    
     document.getElementById('pmet').innerHTML=h;
   }else{
     document.getElementById('ana-res').style.display='none';
@@ -1757,7 +1843,12 @@ const APRENDA_ARTIGOS=[
   {id:'sono-fome',cat:'Estilo de vida',titulo:'Por que dormir mal piora a fome',icone:'ti-moon',cor:'ip',corpo:`<h2>Sono e resist\u00eancia insul\u00ednica</h2><p>Uma \u00fanica noite de 4 horas de sono j\u00e1 reduz mensuravelmente a sensibilidade \u00e0 insulina no dia seguinte. N\u00e3o \u00e9 exagero \u2014 est\u00e1 documentado em estudos com rastreamento de glicemia cont\u00ednua.</p><h3>Os mecanismos</h3><p><strong>Cortisol:</strong> priva\u00e7\u00e3o de sono eleva o cortisol, que instrui o f\u00edgado a produzir e liberar glicose.<br><strong>Grelina e leptina:</strong> noite mal dormida aumenta a grelina (horm\u00f4nio da fome) e reduz a leptina (horm\u00f4nio da saciedade). Resultado: voc\u00ea acorda com mais fome e menos satisfeito com as refei\u00e7\u00f5es.<br><strong>Resist\u00eancia insul\u00ednica direta:</strong> o sono profundo (fase N3) \u00e9 quando o corpo "reseta" a sensibilidade celular \u00e0 insulina.</p><h3>7 horas \u00e9 o m\u00ednimo</h3><p>Abaixo de 7 horas, os efeitos metab\u00f3licos negativos aparecem de forma consistente em estudos populacionais. Dormir bem n\u00e3o \u00e9 luxo \u2014 \u00e9 parte do tratamento.</p>`},
   {id:'jejum',cat:'Nutri\u00e7\u00e3o',titulo:'Jejum intermitente: pode ou n\u00e3o pode',icone:'ti-clock',cor:'it',corpo:`<h2>Jejum intermitente e RI</h2><p>Jejum intermitente \u2014 especificamente o TRE (time-restricted eating, ou alimenta\u00e7\u00e3o restrita no tempo) \u2014 tem evid\u00eancias crescentes para melhora da resist\u00eancia insul\u00ednica.</p><h3>O que funciona</h3><p>Janela alimentar de 8\u201312 horas. Exemplo: comer das 8h \u00e0s 18h (10h de janela) e ficar 14h sem ingerir calorias. Isso permite que a insulina fique baixa por per\u00edodos prolongados \u2014 exatamente o oposto do padr\u00e3o de beliscar o dia todo.</p><h3>Janela cedo funciona melhor</h3><p>Pesquisas mostram que janelas alimentares mais cedo no dia (tipo 7h\u201317h) funcionam melhor que pular o caf\u00e9 e jantar tarde. Isso porque a sensibilidade \u00e0 insulina \u00e9 maior pela manh\u00e3.</p><h3>Aten\u00e7\u00e3o</h3><p>Jejum intermitente n\u00e3o \u00e9 para todos. Pessoas com hist\u00f3rico de compuls\u00e3o alimentar, gestantes, adolescentes e algumas condi\u00e7\u00f5es m\u00e9dicas devem consultar profissional antes de adotar. O jejum tamb\u00e9m n\u00e3o compensa uma dieta de alto IG.</p>`},
   {id:'fora-casa',cat:'Nutri\u00e7\u00e3o',titulo:'Como montar prato fora de casa',icone:'ti-building-store',cor:'ia',corpo:`<h2>Comer fora sem prejudicar a RI</h2><p>Comer fora \u00e9 inevit\u00e1vel. A boa not\u00edcia: com algumas estrat\u00e9gias simples, voc\u00ea controla o pico glic\u00eamico mesmo em restaurante.</p><h3>A regra do prato</h3><p>1. Pe\u00e7a a salada primeiro e coma toda antes de qualquer carboidrato<br>2. Escolha prote\u00edna grelhada (frango, peixe, carne magra)<br>3. Troque arroz branco por arroz integral quando poss\u00edvel, ou reduza a por\u00e7\u00e3o<br>4. Pe\u00e7a feij\u00e3o \u2014 a fibra dele reduz o IG do restante do prato<br>5. Regue tudo com azeite \u2014 gordura boa retarda absor\u00e7\u00e3o</p><h3>Nos fast foods</h3><p>Tire o p\u00e3o e coma o recheio. Pe\u00e7a salada em vez de batata frita. \u00c1gua ou ch\u00e1 sem a\u00e7\u00facar em vez de refrigerante. Essas trocas reduzem o impacto glic\u00eamico em mais de 60%.</p><h3>Em festas e confraterniza\u00e7\u00f5es</h3><p>Coma uma refei\u00e7\u00e3o proteica antes de sair. Chegue cedo \u2014 as op\u00e7\u00f5es mais saud\u00e1veis acabam primeiro. Escolha prote\u00ednas, queijos e vegetais antes de qualquer carboidrato. Prefira vinho tinto seco a cerveja ou drinks.</p>`},
-  {id:'compulsao',cat:'Comportamento',titulo:'Como lidar com a compuls\u00e3o alimentar',icone:'ti-cookie',cor:'ico',corpo:`<h2>Compuls\u00e3o e RI: o ciclo que se alimenta</h2><p>Compuls\u00e3o por doces e carboidratos simples \u00e9 frequentemente um sintoma de RI \u2014 n\u00e3o uma fraqueza de vontade. Quando a glicemia cai r\u00e1pido (por um pico anterior), o c\u00e9rebro entra em modo de emerg\u00eancia e pede carboidrato de alto IG com urg\u00eancia.</p><h3>Quebrando o ciclo</h3><p><strong>Prote\u00edna em todas as refei\u00e7\u00f5es:</strong> a prote\u00edna estabiliza a glicemia e reduz o sinal de fome urgente.<br><strong>N\u00e3o fique mais de 4-5h sem comer:</strong> quedas bruscas de glicemia disparam a vontade de doce.<br><strong>N\u00e3o corte o doce de forma abrupta:</strong> substitua gradualmente. Chocolate 70% em vez de ao leite. Frutas com pasta de amendoim em vez de biscoito.<br><strong>Hidrate-se:</strong> muita "fome" \u00e9 sede disfar\u00e7ada.</p><h3>A regra dos 10 minutos</h3><p>Quando a vontade de doce bater, espere 10 minutos e beba um copo de \u00e1gua. Em 60-70% dos casos, a vontade de doce passa. Se ainda persistir, coma algo proteico ou uma fruta com castanha.</p>`}
+  {id:'compulsao',cat:'Comportamento',titulo:'Como lidar com a compuls\u00e3o alimentar',icone:'ti-cookie',cor:'ico',corpo:`<h2>Compuls\u00e3o e RI: o ciclo que se alimenta</h2><p>Compuls\u00e3o por doces e carboidratos simples \u00e9 frequentemente um sintoma de RI \u2014 n\u00e3o uma fraqueza de vontade. Quando a glicemia cai r\u00e1pido (por um pico anterior), o c\u00e9rebro entra em modo de emerg\u00eancia e pede carboidrato de alto IG com urg\u00eancia.</p><h3>Quebrando o ciclo</h3><p><strong>Prote\u00edna em todas as refei\u00e7\u00f5es:</strong> a prote\u00edna estabiliza a glicemia e reduz o sinal de fome urgente.<br><strong>N\u00e3o fique mais de 4-5h sem comer:</strong> quedas bruscas de glicemia disparam a vontade de doce.<br><strong>N\u00e3o corte o doce de forma abrupta:</strong> substitua gradualmente. Chocolate 70% em vez de ao leite. Frutas com pasta de amendoim em vez de biscoito.<br><strong>Hidrate-se:</strong> muita "fome" \u00e9 sede disfar\u00e7ada.</p><h3>A regra dos 10 minutos</h3><p>Quando a vontade de doce bater, espere 10 minutos e beba um copo de \u00e1gua. Em 60-70% dos casos, a vontade de doce passa. Se ainda persistir, coma algo proteico ou uma fruta com castanha.</p>`},
+  {id:'intestino-cerebro',cat:'Intestino',titulo:'Intestino: o seu segundo cerebro',icone:'ti-brain',cor:'ig',corpo:'<h2>Intestino: o seu segundo cerebro</h2><p>O intestino abriga mais de 100 milhoes de neuronios — mais do que a medula espinhal. Por isso e chamado de segundo cerebro. Ele se comunica diretamente com o cerebro pelo nervo vago e produz mais de 90% da serotonina do corpo, o hormonio do bem-estar.</p><h3>A conexao intestino-insulina</h3><p>O microbioma intestinal influencia diretamente a sensibilidade a insulina. Bacterias beneficas produzem acidos graxos de cadeia curta que melhoram a captacao de glicose pelas celulas. Quando o intestino esta inflamado, essa producao cai e a RI piora.</p><h3>Sinais de que seu intestino esta saudavel</h3><p>Fezes formadas e regulares (1-2x ao dia), ausencia de gases excessivos, energia estavel apos as refeicoes, humor equilibrado e sono de qualidade. Um intestino saudavel digere sem desconforto e mantem o metabolismo ativo.</p><h3>O que voce pode fazer agora</h3><p>Coma 25-30g de fibra por dia, mastigue devagar, reduza ultraprocessados e durma 7-8h. Cada refeicao e uma oportunidade de nutrir as bacterias que cuidam de voce.</p>'},
+  {id:'intestino-sinais-alerta',cat:'Intestino',titulo:'Sinais de que o intestino pede socorro',icone:'ti-alert-circle',cor:'ir50',corpo:'<h2>Sinais de que o intestino pede socorro</h2><p>O intestino avisa quando nao esta bem — basta saber ouvir. Esses sinais indicam que o microbioma esta desequilibrado e podem estar piorando a resistencia insulinica.</p><h3>Sinais de alerta</h3><p><strong>Inchaço frequente:</strong> Gas excessivo apos refeicoes indica fermentacao bacteriana desequilibrada.<br><strong>Intestino alterado:</strong> Constipacao cronica ou diarreia frequente sinalizam disbiose.<br><strong>Cansaco sem causa:</strong> Inflamacao intestinal libera citocinas que causam fadiga sistemica.<br><strong>Vontade intensa de doce:</strong> Bacterias nocivas se alimentam de acucar e criam esse desejo.<br><strong>Pele problematica:</strong> Acne, eczema e rosácea frequentemente tem origem intestinal.<br><strong>Ansiedade e baixo humor:</strong> Com 90% da serotonina no intestino, o desequilibrio afeta diretamente o humor.</p><h3>O que pode estar causando</h3><p>Antibioticos sem reposicao, dieta rica em ultraprocessados, estresse cronico, poco sono e sedentarismo destroem as bacterias beneficas. A boa noticia: o microbioma se recupera em semanas com as mudancas certas.</p>'},
+  {id:'intestino-alimentos',cat:'Intestino',titulo:'Alimentos que cuidam do intestino',icone:'ti-salad',cor:'it',corpo:'<h2>Alimentos que cuidam do intestino</h2><p>O que voce come hoje molda o microbioma de amanha. Essas escolhas alimentares sao as mais beneficas para quem tem resistencia insulinica.</p><h3>Prebioticos — alimento para as bacterias boas</h3><p><strong>Banana verde e biomassa:</strong> Rica em amido resistente, o melhor alimento para Lactobacillus e Bifidobacterium.<br><strong>Alho e cebola:</strong> Contem FOS (frutooligossacarideos) que nutrem bacterias anti-inflamatorias.<br><strong>Aspargo e alcachofra:</strong> Fontes de inulina, fibra que melhora a sensibilidade a insulina.<br><strong>Aveia:</strong> Beta-glucana reduz o pico glicemico e alimenta o microbioma protetor.</p><h3>Probioticos — bacterias vivas</h3><p><strong>Kefir:</strong> O mais poderoso — contem 30+ especies de bacterias. Toma 150ml em jejum.<br><strong>Iogurte natural sem acucar:</strong> Minimo 2x por semana.<br><strong>Kimchi e chucrute:</strong> Fermentados que reduzem inflamacao intestinal.</p><h3>Anti-inflamatorios intestinais</h3><p>Azeite extra virgem (2 colheres ao dia), curcuma com pimenta-do-reino, gengibre fresco, omega-3 (sardinha, salmao) e chocolate amargo 70%+ reduzem a permeabilidade intestinal.</p>'},
+  {id:'intestino-melhorar',cat:'Intestino',titulo:'Como melhorar o intestino em 21 dias',icone:'ti-trending-up',cor:'ig',corpo:'<h2>Como melhorar o intestino em 21 dias</h2><p>O microbioma se renova completamente em 3 semanas. Com as mudancas certas, voce ja sente a diferenca na energia, no intestino e no controle glicemico em menos de um mes.</p><h3>Semana 1 — Reduzir o que prejudica</h3><p>Elimine ultraprocessados, refrigerantes e fast food. Reduza o acucar para maximo 25g/dia. Mastigue devagar (minimo 20 vezes por garfada) — a digestao comeca na boca. Beba 2L de agua fora das refeicoes.</p><h3>Semana 2 — Adicionar o que nutre</h3><p>Introduza 1 fonte de probiotico por dia (kefir, iogurte natural, kimchi). Adicione 1 colher de farinha de banana verde no smoothie ou vitamina. Aumente vegetais coloridos para metade do prato.</p><h3>Semana 3 — Consolidar os habitos</h3><p>Inclua 30 min de caminhada diaria — o movimento estimula o peristaltismo. Durma no mesmo horario — o microbioma tem ritmo circadiano. Gerencie o estresse: cortisol alto inflama o intestino.</p><h3>O que esperar</h3><p>Menos inchaço na 1a semana, melhor funcionamento intestinal na 2a, mais energia e humor melhor na 3a. A sensibilidade a insulina melhora de forma mensuravel em 21 dias com essas mudancas.</p>'},
+  {id:'intestino-permeabilidade',cat:'Intestino',titulo:'Intestino permeavél e resistência insulínica',icone:'ti-filter',cor:'ib',corpo:'<h2>Intestino permeavél e resistencia insulinica</h2><p>A parede intestinal e formada por celulas unidas por proteinas chamadas tight junctions. Quando essas uniao enfraquecem, moleculas que nao deveriam entrar na corrente sanguinea passam — isso e o intestino permeavél (leaky gut).</p><h3>Como isso afeta a insulina</h3><p>Fragmentos de bacterias (LPS) que vazam pelo intestino permeavél ativam receptores de inflamacao nas celulas musculares e adiposas, bloqueando os receptores de insulina. E uma das causas mais subestimadas da resistencia insulinica em pessoas sem sobrepeso.</p><h3>O que causa o intestino permeavél</h3><p>Gluten em excesso, AINES (ibuprofeno, aspirina frequentes), alcool, estresse cronico, antibioticos sem reposicao e dieta pobre em fibras enfraquecem as tight junctions ao longo do tempo.</p><h3>Como diagnosticar e tratar</h3><p>O exame de zonulina no sangue identifica o problema. O tratamento combina glutamina (5g ao dia em jejum — aminoacido que repara a mucosa intestinal), zinc-carnosina, probioticos de alta cepa e reducao dos alimentos gatilho por 30 dias.</p>'}
 ];
 
 function renderAprenda(){
