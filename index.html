@@ -1069,9 +1069,22 @@ function renderChart(){
   if(w.length)WC=new Chart(document.getElementById('wc').getContext('2d'),{type:'line',data:{labels:w.map(r=>fd(r.data)),datasets:[{label:'Energia',data:w.map(r=>r.energia),borderColor:'#1D9E75',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.35},{label:'Estresse',data:w.map(r=>r.stress),borderColor:'#D85A30',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.35,borderDash:[4,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#6B6B65'},grid:{display:false}},y:{min:0,max:10,ticks:{font:{size:10},color:'#6B6B65',stepSize:2},grid:{color:'rgba(0,0,0,.05)'}}}}});
 }
 function renderHist(){
-  const el=document.getElementById('hlist');
+  var el=document.getElementById('hlist');
   if(!REGS.length){el.innerHTML='<div class="empty"><i class="ti ti-clipboard-text"></i>Nenhum registro ainda.</div>';return;}
-  el.innerHTML=[...REGS].reverse().map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem .875rem;background:#fff;border:.5px solid var(--bd);border-radius:var(--rm);margin-bottom:6px"><span style="font-size:12px;color:var(--m)">${fd(r.data)}</span><div style="display:flex;gap:10px">${r.peso?`<span style="font-size:13px;font-weight:500">${r.peso}<span style="font-size:11px;color:var(--m)">kg</span></span>`:''}<span style="font-size:13px;font-weight:500">${r.energia}<span style="font-size:11px;color:var(--m)">en</span></span></div></div>`).join('');
+  var html='';
+  var reversed=REGS.slice().reverse();
+  for(var i=0;i<reversed.length;i++){
+    var r=reversed[i];
+    var d=new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:.5px solid var(--bd)">'
+      +'<div style="font-size:12px;color:var(--m)">'+d+'</div>'
+      +'<div style="display:flex;gap:8px;align-items:center">';
+    if(r.peso)html+='<span style="font-size:13px;font-weight:500">'+r.peso+'<span style="font-size:11px;color:var(--m)">kg</span></span>';
+    if(r.glic)html+='<span style="font-size:13px;font-weight:500">'+r.glic+'<span style="font-size:11px;color:var(--m)">mg</span></span>';
+    if(r.energia)html+='<span style="font-size:13px;font-weight:500">'+r.energia+'<span style="font-size:11px;color:var(--m)">en</span></span>';
+    html+='</div></div>';
+  }
+  el.innerHTML=html;
 }
 
 // DIARIO ALIMENTAR
@@ -1902,22 +1915,32 @@ const DICAS=[
 ];
 
 function renderDicas(){
-  const el=document.getElementById('dicas-lista');
+  var el=document.getElementById('dicas-list');
   if(!el)return;
-  el.innerHTML=DICAS.map((d,i)=>`
-    <div class="dica-card">
-      <div class="dica-head" onclick="toggleDica(${i})">
-        <div style="width:38px;height:38px;border-radius:10px;background:${d.cor};border:.5px solid ${d.cor2};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${d.icone}" style="font-size:18px;color:${d.ct}"></i></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:500;margin-bottom:3px">${d.titulo}</div>
-          <div style="font-size:12px;color:var(--m);line-height:1.4">${d.resumo}</div>
-        </div>
-        <i class="ti ti-chevron-${dicasAberta===i?'up':'down'}" style="font-size:16px;color:var(--m);flex-shrink:0"></i>
-      </div>
-      <div class="dica-body" id="dica-${i}" style="display:${dicasAberta===i?'block':'none'};background:${d.cor}">
-        <p style="font-size:13px;color:${d.ct};line-height:1.65">${d.detalhe}</p>
-      </div>
-    </div>`).join('');
+  var html='';
+  DICAS.forEach(function(d,i){
+    html+='<div class="dica-card">'
+      +'<div class="dica-head" onclick="toggleDica('+i+')">'
+      +'<div class="modi '+d.cor+'" style="margin-bottom:0;flex-shrink:0"><i class="ti '+d.icone+'"></i></div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:500">'+d.titulo+'</div>'
+      +'<div style="font-size:11px;color:var(--m);margin-top:2px">'+d.cat+'</div></div>'
+      +'<i class="ti ti-chevron-down" id="dica-arr-'+i+'" style="font-size:16px;color:var(--m);flex-shrink:0;transition:transform .2s"></i>'
+      +'</div>'
+      +'<div class="dica-body" id="dica-body-'+i+'">'
+      +'<p style="font-size:13px;color:var(--m);line-height:1.6;margin-bottom:.5rem">'+d.por+'</p>'
+      +'<p style="font-size:13px;line-height:1.6">'+d.dica+'</p>'
+      +'</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function toggleDica(i){
+  var body=document.getElementById('dica-body-'+i);
+  var arr=document.getElementById('dica-arr-'+i);
+  if(!body)return;
+  var open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  if(arr)arr.style.transform=open?'':'rotate(180deg)';
 }
 function toggleDica(i){dicasAberta=dicasAberta===i?null:i;renderDicas();}
 
