@@ -1852,19 +1852,25 @@ const APRENDA_ARTIGOS=[
 ];
 
 function renderAprenda(){
-  const cats=[...new Set(APRENDA_ARTIGOS.map(a=>a.cat))];
-  const el=document.getElementById('aprenda-grid');
+  var cats=[];
+  APRENDA_ARTIGOS.forEach(function(a){if(cats.indexOf(a.cat)<0)cats.push(a.cat);});
+  var el=document.getElementById('aprenda-grid');
   if(!el)return;
-  el.innerHTML=cats.map(cat=>`
-    <div style="margin-bottom:1.25rem">
-      <div style="font-size:11px;color:var(--m);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.625rem">${cat}</div>
-      ${APRENDA_ARTIGOS.filter(a=>a.cat===cat).map(a=>`
-        <div onclick="abrirArtigo('${a.id}')" style="background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .15s">
-          <div class="modi ${a.cor}" style="flex-shrink:0;margin-bottom:0"><i class="ti ${a.icone}"></i></div>
-          <div><div style="font-size:13px;font-weight:500">${a.titulo}</div><div style="font-size:11px;color:var(--m);margin-top:2px">${a.cat}</div></div>
-          <i class="ti ti-chevron-right" style="font-size:16px;color:var(--m);margin-left:auto;flex-shrink:0"></i>
-        </div>`).join('')}
-    </div>`).join('');
+  var html='';
+  cats.forEach(function(cat){
+    html+='<div style="margin-bottom:1.25rem">'
+      +'<div style="font-size:11px;color:var(--m);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.625rem">'+cat+'</div>';
+    APRENDA_ARTIGOS.filter(function(a){return a.cat===cat;}).forEach(function(a){
+      html+='<div onclick="abrirArtigo(\''+a.id+'\')" style="background:#fff;border:.5px solid var(--bd);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:12px">'
+        +'<div class="modi '+a.cor+'" style="flex-shrink:0;margin-bottom:0"><i class="ti '+a.icone+'"></i></div>'
+        +'<div><div style="font-size:13px;font-weight:500">'+a.titulo+'</div>'
+        +'<div style="font-size:11px;color:var(--m);margin-top:2px">'+a.cat+'</div></div>'
+        +'<i class="ti ti-chevron-right" style="font-size:16px;color:var(--m);margin-left:auto;flex-shrink:0"></i>'
+        +'</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
 }
 function abrirArtigo(id){
   const a=APRENDA_ARTIGOS.find(x=>x.id===id);if(!a)return;
